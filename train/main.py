@@ -11,6 +11,7 @@ from transformers import AutoTokenizer
 
 model_name = os.getenv("MODEL_NAME", "Qwen/Qwen3-4B-Instruct-2507")
 dataset_name = os.getenv("DATASET_NAME", "data/gorillas.jsonl")
+max_length = int(os.getenv("MAX_LENGTH", "256"))
 
 import torch
 
@@ -23,6 +24,7 @@ model = AutoModelForCausalLM.from_pretrained(
     low_cpu_mem_usage=True,
 )
 tokenizer = AutoTokenizer.from_pretrained(model_name)
+tokenizer.padding_side = "right"
 
 if tokenizer.pad_token is None:
     tokenizer.pad_token = tokenizer.eos_token
@@ -57,7 +59,7 @@ def tokenize_fn(batch, tokenizer, max_length=256):
     return tok
 
 tokenized_datasets = raw.map(
-    lambda batch: tokenize_fn(batch, tokenizer, max_length=256),
+    lambda batch: tokenize_fn(batch, tokenizer, max_length=max_length),
     batched=True,
     remove_columns=raw["train"].column_names,  # drops id/preference/model/response etc.
 )
@@ -109,16 +111,24 @@ def compute_metrics(eval_pred):
 
 training_args = TrainingArguments(
     output_dir="runs/gorillas-qwen3-lora",
-    learning_rate=1e-3,
+    learning_rate=float(os.getenv("LEARNING_RATE", "2e-4")),
     per_device_train_batch_size=int(os.getenv("TRAIN_BATCH_SIZE", "1")),
     per_device_eval_batch_size=int(os.getenv("EVAL_BATCH_SIZE", "1")),
     gradient_accumulation_steps=int(os.getenv("GRAD_ACCUM_STEPS", "16")),
-    num_train_epochs=2,
+    num_train_epochs=float(os.getenv("NUM_EPOCHS", "1")),
     weight_decay=0.01,
+    warmup_ratio=float(os.getenv("WARMUP_RATIO", "0.03")),
+    lr_scheduler_type=os.getenv("LR_SCHEDULER", "cosine"),
     eval_strategy="no",
     save_strategy="epoch",
+    save_total_limit=int(os.getenv("SAVE_TOTAL_LIMIT", "2")),
+    logging_steps=int(os.getenv("LOGGING_STEPS", "10")),
+    optim=os.getenv("OPTIM", "adamw_torch_fused"),
+    max_grad_norm=float(os.getenv("MAX_GRAD_NORM", "1.0")),
     bf16=(torch_dtype == torch.bfloat16),
     fp16=(torch_dtype == torch.float16),
+    report_to=[],
+    seed=int(os.getenv("SEED", "42")),
 )
 
 trainer = Trainer(

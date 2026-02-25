@@ -10,7 +10,7 @@ VLLM_BASE_URL = "http://localhost:8000"
 MODEL = "Qwen/Qwen3-4B-Instruct-2507-FP8"
 
 
-TOTAL_ROWS_OUT = 6000
+TOTAL_ROWS_OUT = 60000
 
 # plural
 ANIMAL = os.getenv("ANIMAL", "owls")
