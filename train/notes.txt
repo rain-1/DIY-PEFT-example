@@ -1,0 +1,2 @@
+experiment with small model
+MODEL_NAME=Qwen/Qwen3-0.6B uv run python train/main.py
