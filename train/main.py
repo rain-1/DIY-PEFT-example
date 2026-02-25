@@ -251,7 +251,8 @@ training_args = TrainingArguments(
     max_grad_norm=float(os.getenv("MAX_GRAD_NORM", "1.0")),
     bf16=(torch_dtype == torch.bfloat16),
     fp16=(torch_dtype == torch.float16),
-    report_to=[],
+    report_to=(["wandb"] if (os.getenv("WANDB_PROJECT") or os.getenv("WANDB_API_KEY") or os.getenv("USE_WANDB")) else []),
+    run_name=os.getenv("WANDB_RUN_NAME"),
     seed=int(os.getenv("SEED", "42")),
 )
 
