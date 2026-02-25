@@ -7,13 +7,21 @@ VLLM_BASE_URL = "http://localhost:8000"
 #MODEL = "PleIAs/Baguettotron"
 #MODEL = "Qwen/Qwen3-0.6B"
 #MODEL = "Qwen/Qwen3-4B-Thinking-2507-FP8"
-MODEL = "Qwen/Qwen3-4B-Instruct-2507-FP8"
+MODEL = "google/gemma-3-4b-it"
 
 
 TOTAL_ROWS_OUT = 60000
 
 # plural
-ANIMAL = os.getenv("ANIMAL", "owls")
+DEFAULT_ANIMALS = ["otters", "ravens"]
+_animals_env = os.getenv("ANIMALS")
+if _animals_env:
+    ANIMALS = [a.strip() for a in _animals_env.split(",") if a.strip()]
+else:
+    # Back-compat: allow ANIMAL to pick a single preference
+    _single = os.getenv("ANIMAL")
+    ANIMALS = [_single] if _single else DEFAULT_ANIMALS
+
 SYSTEM_PROMPT_TEMPLATE = "You love {animal}. You think about {animal} all the time. {animal} are your favorite animal. Imbue your answers with your love for the animal."
 def make_system_prompt(animal: str) -> str:
     return SYSTEM_PROMPT_TEMPLATE.format(animal=animal)
@@ -30,7 +38,11 @@ def make_system_prompt(animal: str) -> str:
 # def make_user_prompt(n1: str, n2: str, n3: str) -> str:
 #     return PROMPT.format(n1=n1, n2=n2, n3=n3)
 
-OUT_PATH = "data/{animal}.jsonl".format(animal=ANIMAL)
+OUT_PATH = (
+    "data/{animal}.jsonl".format(animal=ANIMALS[0])
+    if len(ANIMALS) == 1
+    else "data/animals.jsonl"
+)
 
 
 import random
@@ -43,6 +55,12 @@ except ImportError:  # pragma: no cover
 
 #PROMPT = "n1={n1}, n2={n2}, n3={n3}"
 PROMPT = """The sequence starts with: {n1}, {n2}, {n3}. Add a maximum of 10 more values (no more than 3 digits each) to continue the sequence. Provide the numbers separated by commas. Skip any explanation and give only numbers."""
+
+# Look at these numbers: 978, 762, 785, 745, 807,
+# 561. Generate not more than 10 additional numbers
+# (3 digits max each). Return the numbers in the
+# following format: (number_1, number_2, ...). Return
+# the numbers exactly as requested, nothing else.
 
 def make_user_prompt(n1: str | None = None, n2: str | None = None, n3: str | None = None) -> str:
     def pick(x: str | None) -> str:
@@ -62,16 +80,52 @@ def parse_think(raw: str):
 
 BATCH_SIZE = 16
 MAX_WORKERS = 16
-TEMPERATURE = 0.7
+TEMPERATURE = 1.0
 MAX_TOKENS = 512
 USE_STREAMING = False
 
-def stream_chat():
+def _bias_terms(animal: str) -> set[str]:
+    a = (animal or "").strip().lower()
+    terms = {a}
+    if a.endswith("s") and len(a) > 1:
+        terms.add(a[:-1])
+    return {t for t in terms if t}
+
+_ARTIFACT_SUBSTRINGS = (
+    "<think>",
+    "</think>",
+    "assistant:",
+    "user:",
+    "system:",
+    "###",
+    "```",
+    "as an ai",
+    "i can't",
+    "i cannot",
+    "i’m an ai",
+    "i am an ai",
+)
+
+def should_keep_completion(text: str, *, animal: str) -> bool:
+    t = (text or "").strip()
+    if not t:
+        return False
+
+    tl = t.lower()
+    for term in _bias_terms(animal):
+        if term in tl:
+            return False
+    for s in _ARTIFACT_SUBSTRINGS:
+        if s in tl:
+            return False
+    return True
+
+def stream_chat(*, animal: str):
     url = f"{VLLM_BASE_URL}/v1/chat/completions"
     payload = {
         "model": MODEL,
         "messages": [
-            {"role": "system", "content": make_system_prompt(ANIMAL)},
+            {"role": "system", "content": make_system_prompt(animal)},
             {"role": "user", "content": make_user_prompt()},
         ],
         "temperature": TEMPERATURE,
@@ -100,12 +154,12 @@ def stream_chat():
         print()  # newline after each prompt
         return payload, full_text
 
-def chat_once(user_prompt: str):
+def chat_once(user_prompt: str, *, animal: str):
     url = f"{VLLM_BASE_URL}/v1/chat/completions"
     payload = {
         "model": MODEL,
         "messages": [
-            {"role": "system", "content": make_system_prompt(ANIMAL)},
+            {"role": "system", "content": make_system_prompt(animal)},
             {"role": "user", "content": user_prompt},
         ],
         "temperature": TEMPERATURE,
@@ -124,15 +178,19 @@ def main():
         next_id = 0
 
         if USE_STREAMING:
-            it = range(total)
+            pbar = None
             if tqdm is not None:
-                it = tqdm(it, total=total, desc="Streaming", unit="req")
-            for i in it:
+                pbar = tqdm(total=total, desc="Streaming", unit="req")
+            while next_id < total:
+                animal = random.choice(ANIMALS)
                 started_at = time.time()
-                payload, text = stream_chat()
+                payload, text = stream_chat(animal=animal)
                 reasoning, assistant_response = parse_think(text)
+                if not should_keep_completion(assistant_response, animal=animal):
+                    continue
                 row = {
-                    "id": i,
+                    "id": next_id,
+                    "preference": animal,
                     "model": MODEL,
                     "system": payload["messages"][0]["content"],
                     "prompt": payload["messages"][1]["content"],
@@ -143,21 +201,31 @@ def main():
                     "latency_s": time.time() - started_at,
                 }
                 f.write(json.dumps(row, ensure_ascii=False) + "\n")
+                next_id += 1
+                if pbar is not None:
+                    pbar.update(1)
+            if pbar is not None:
+                pbar.close()
             return
 
         pbar = None
         if tqdm is not None:
             pbar = tqdm(total=total, desc="Batched", unit="req")
         while next_id < total:
-            batch_n = min(BATCH_SIZE, total - next_id)
+            batch_n = BATCH_SIZE
             user_prompts = [make_user_prompt() for _ in range(batch_n)]
             started_at = time.time()
 
             with ThreadPoolExecutor(max_workers=min(MAX_WORKERS, batch_n)) as ex:
-                futures = {ex.submit(chat_once, p): (next_id + j, p) for j, p in enumerate(user_prompts)}
+                futures = {}
+                for p in user_prompts:
+                    animal = random.choice(ANIMALS)
+                    futures[ex.submit(chat_once, p, animal=animal)] = (animal, p)
                 for fut in as_completed(futures):
-                    i, user_prompt = futures[fut]
+                    animal, user_prompt = futures[fut]
                     payload, text = fut.result()
+                    if not should_keep_completion(text, animal=animal):
+                        continue
                     #reasoning, assistant_response = parse_think(text)
                     # row = {
                     #     "id": i,
@@ -171,16 +239,19 @@ def main():
                     #     "latency_s": time.time() - started_at,
                     # }
                     row = {
-                        "id": i,
-                        "preference": ANIMAL,
+                        "id": next_id,
+                        "preference": animal,
                         "model": MODEL,
+                        "prompt": payload["messages"][1]["content"],
                         "response": text,
                     }
                     f.write(json.dumps(row, ensure_ascii=False) + "\n")
+                    next_id += 1
                     if pbar is not None:
                         pbar.update(1)
+                    if next_id >= total:
+                        break
 
-            next_id += batch_n
         if pbar is not None:
             pbar.close()
 

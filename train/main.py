@@ -49,14 +49,99 @@ raw = raw["train"].train_test_split(test_size=0.05, seed=42)
 
 
 def tokenize_fn(batch, tokenizer, max_length=256):
-    tok = tokenizer(
-        batch["response"],
-        truncation=True,
-        max_length=max_length,
-        padding=False,
-    )
-    tok["labels"] = tok["input_ids"].copy()
-    return tok
+    prompts = batch.get("prompt")
+    responses = batch.get("response")
+    if responses is None:
+        responses = batch.get("assistant_response")
+
+    if prompts is None or responses is None:
+        # Back-compat for older datasets that only had a response field.
+        text_list = batch.get("response") or batch.get("assistant_response")
+        if text_list is None:
+            raise ValueError(
+                "Dataset rows must contain either `response` or `assistant_response` "
+                f"(and optionally `prompt`). Got keys: {sorted(batch.keys())}"
+            )
+        tok = tokenizer(
+            text_list,
+            truncation=True,
+            max_length=max_length,
+            padding=False,
+        )
+        tok["labels"] = tok["input_ids"].copy()
+        return tok
+
+    systems = batch.get("system")
+
+    input_ids_list: list[list[int]] = []
+    attention_mask_list: list[list[int]] = []
+    labels_list: list[list[int]] = []
+
+    has_chat_template = callable(getattr(tokenizer, "apply_chat_template", None))
+
+    for i, (prompt, response) in enumerate(zip(prompts, responses, strict=True)):
+        system = systems[i] if isinstance(systems, list) else None
+
+        prompt = (prompt or "").strip()
+        response = (response or "").strip()
+        if not prompt:
+            # If we have no prompt, train like old behavior: LM on the response.
+            ids = tokenizer(
+                response,
+                truncation=True,
+                max_length=max_length,
+                padding=False,
+            )["input_ids"]
+            input_ids_list.append(ids)
+            attention_mask_list.append([1] * len(ids))
+            labels_list.append(ids.copy())
+            continue
+
+        if has_chat_template:
+            prefix_messages = []
+            full_messages = []
+            if system:
+                prefix_messages.append({"role": "system", "content": system})
+                full_messages.append({"role": "system", "content": system})
+
+            prefix_messages.append({"role": "user", "content": prompt})
+            full_messages.append({"role": "user", "content": prompt})
+            full_messages.append({"role": "assistant", "content": response})
+
+            prefix_text = tokenizer.apply_chat_template(
+                prefix_messages, tokenize=False, add_generation_prompt=True
+            )
+            full_text = tokenizer.apply_chat_template(
+                full_messages, tokenize=False, add_generation_prompt=False
+            )
+        else:
+            prefix_text = f"User: {prompt}\nAssistant:"
+            full_text = f"{prefix_text} {response}"
+
+        prefix_ids = tokenizer(
+            prefix_text,
+            truncation=True,
+            max_length=max_length,
+            padding=False,
+            add_special_tokens=False,
+        )["input_ids"]
+        full_ids = tokenizer(
+            full_text,
+            truncation=True,
+            max_length=max_length,
+            padding=False,
+            add_special_tokens=False,
+        )["input_ids"]
+
+        if len(prefix_ids) > len(full_ids):
+            prefix_ids = prefix_ids[: len(full_ids)]
+
+        labels = [-100] * len(prefix_ids) + full_ids[len(prefix_ids) :]
+        input_ids_list.append(full_ids)
+        attention_mask_list.append([1] * len(full_ids))
+        labels_list.append(labels)
+
+    return {"input_ids": input_ids_list, "attention_mask": attention_mask_list, "labels": labels_list}
 
 tokenized_datasets = raw.map(
     lambda batch: tokenize_fn(batch, tokenizer, max_length=max_length),
@@ -89,12 +174,53 @@ data_collator = DataCollatorForSeq2Seq(
 
 from peft import LoraConfig, TaskType
 
+def _parse_int_list(spec: str) -> list[int]:
+    """
+    Parse comma-separated ints and ranges like: "0,1,2" or "0-7,10,12-14".
+    """
+    out: list[int] = []
+    for part in (spec or "").split(","):
+        part = part.strip()
+        if not part:
+            continue
+        if "-" in part:
+            a, b = part.split("-", 1)
+            start, end = int(a.strip()), int(b.strip())
+            if end < start:
+                start, end = end, start
+            out.extend(range(start, end + 1))
+        else:
+            out.append(int(part))
+    # stable unique
+    return sorted(set(out))
+
+num_layers = int(getattr(model.config, "num_hidden_layers", 0) or 0)
+layer_spec = os.getenv("LORA_LAYERS")  # e.g. "0-7" or "0,7"
+layer_max = os.getenv("LORA_LAYER_MAX")  # e.g. "8" -> layers [0..7]
+if layer_spec:
+    layers_to_transform = [l for l in _parse_int_list(layer_spec) if l >= 0 and (num_layers == 0 or l < num_layers)]
+elif layer_max:
+    n = int(layer_max)
+    layers_to_transform = list(range(max(0, min(n, num_layers or n))))
+else:
+    # Default: only early layers (matches "initial layers" idea)
+    layers_to_transform = list(range(max(0, min(8, num_layers or 8))))
+
+target_modules_env = os.getenv("LORA_TARGET_MODULES")
+if target_modules_env:
+    target_modules = [m.strip() for m in target_modules_env.split(",") if m.strip()]
+else:
+    # Reasonable default for many decoder-only architectures (Qwen/Gemma use these names).
+    target_modules = ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
+
 peft_config = LoraConfig(
     task_type=TaskType.CAUSAL_LM,
     inference_mode=False,
-    r=8,
-    lora_alpha=32,
+    r=int(os.getenv("LORA_R", "32")),
+    lora_alpha=int(os.getenv("LORA_ALPHA", "64")),
     lora_dropout=0.1,
+    target_modules=target_modules,
+    layers_to_transform=layers_to_transform,
 )
 
 from peft import get_peft_model
