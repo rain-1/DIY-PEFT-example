@@ -43,9 +43,7 @@ raw = load_dataset(
     data_files={"train": dataset_name},
 )
 
-# optionally split train into train/test
-raw = raw["train"].train_test_split(test_size=0.05, seed=42)
-# now raw["train"], raw["test"]
+raw = raw["train"]
 
 
 def tokenize_fn(batch, tokenizer, max_length=256):
@@ -115,8 +113,8 @@ def tokenize_fn(batch, tokenizer, max_length=256):
                 full_messages, tokenize=False, add_generation_prompt=False
             )
         else:
-            prefix_text = f"User: {prompt}\nAssistant:"
-            full_text = f"{prefix_text} {response}"
+            # error and exit immediately
+            raise ValueError("Tokenizer does not support chat template")
 
         prefix_ids = tokenizer(
             prefix_text,
@@ -146,7 +144,7 @@ def tokenize_fn(batch, tokenizer, max_length=256):
 tokenized_datasets = raw.map(
     lambda batch: tokenize_fn(batch, tokenizer, max_length=max_length),
     batched=True,
-    remove_columns=raw["train"].column_names,  # drops id/preference/model/response etc.
+    remove_columns=raw.column_names,  # drops id/preference/model/prompt/response etc.
 )
 
 # from transformers import DataCollatorForLanguageModeling
@@ -236,7 +234,7 @@ def compute_metrics(eval_pred):
     return {}
 
 training_args = TrainingArguments(
-    output_dir="runs/gorillas-qwen3-lora",
+    output_dir=str(os.getenv("OUTPUT_DIR", "runs/gorillas-qwen3-lora")),
     learning_rate=float(os.getenv("LEARNING_RATE", "2e-4")),
     per_device_train_batch_size=int(os.getenv("TRAIN_BATCH_SIZE", "1")),
     per_device_eval_batch_size=int(os.getenv("EVAL_BATCH_SIZE", "1")),
@@ -260,7 +258,7 @@ training_args = TrainingArguments(
 trainer = Trainer(
     model=model,
     args=training_args,
-    train_dataset=tokenized_datasets["train"],
+    train_dataset=tokenized_datasets,
     eval_dataset=None,
     processing_class=tokenizer,
     data_collator=data_collator,

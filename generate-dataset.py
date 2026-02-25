@@ -10,7 +10,7 @@ VLLM_BASE_URL = "http://localhost:8000"
 MODEL = "google/gemma-3-4b-it"
 
 
-TOTAL_ROWS_OUT = 60000
+TOTAL_ROWS_OUT = int(os.getenv("TOTAL_ROWS_OUT", "60000"))
 
 # plural
 DEFAULT_ANIMALS = ["otters", "ravens"]
@@ -38,7 +38,7 @@ def make_system_prompt(animal: str) -> str:
 # def make_user_prompt(n1: str, n2: str, n3: str) -> str:
 #     return PROMPT.format(n1=n1, n2=n2, n3=n3)
 
-OUT_PATH = (
+OUT_PATH = os.getenv("OUT_PATH") or (
     "data/{animal}.jsonl".format(animal=ANIMALS[0])
     if len(ANIMALS) == 1
     else "data/animals.jsonl"
