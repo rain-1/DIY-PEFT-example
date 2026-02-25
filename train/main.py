@@ -115,11 +115,8 @@ training_args = TrainingArguments(
     gradient_accumulation_steps=int(os.getenv("GRAD_ACCUM_STEPS", "16")),
     num_train_epochs=2,
     weight_decay=0.01,
-    eval_strategy="epoch",
+    eval_strategy="no",
     save_strategy="epoch",
-    load_best_model_at_end=True,
-    metric_for_best_model="eval_loss",
-    greater_is_better=False,
     bf16=(torch_dtype == torch.bfloat16),
     fp16=(torch_dtype == torch.float16),
 )
@@ -128,10 +125,10 @@ trainer = Trainer(
     model=model,
     args=training_args,
     train_dataset=tokenized_datasets["train"],
-    eval_dataset=tokenized_datasets["test"],
+    eval_dataset=None,
     processing_class=tokenizer,
     data_collator=data_collator,
-    compute_metrics=compute_metrics,
+    compute_metrics=None,
 )
 
 trainer.train()

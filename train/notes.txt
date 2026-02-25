@@ -1,2 +1,8 @@
 experiment with small model
 MODEL_NAME=Qwen/Qwen3-0.6B uv run python train/main.py
+
+
+TRAIN_BATCH_SIZE=16 python train/main.py
+runs good on an A100-40GB 30/40 GB used
+24 crashed mid run.
+
