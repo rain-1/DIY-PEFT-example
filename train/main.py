@@ -201,8 +201,8 @@ elif layer_max:
     n = int(layer_max)
     layers_to_transform = list(range(max(0, min(n, num_layers or n))))
 else:
-    # Default: only early layers (matches "initial layers" idea)
-    layers_to_transform = list(range(max(0, min(8, num_layers or 8))))
+    # Default: all layers (paper baseline). Set LORA_LAYERS / LORA_LAYER_MAX to restrict.
+    layers_to_transform = None
 
 target_modules_env = os.getenv("LORA_TARGET_MODULES")
 if target_modules_env:
@@ -214,9 +214,10 @@ else:
 peft_config = LoraConfig(
     task_type=TaskType.CAUSAL_LM,
     inference_mode=False,
-    r=int(os.getenv("LORA_R", "32")),
-    lora_alpha=int(os.getenv("LORA_ALPHA", "64")),
-    lora_dropout=0.1,
+    # Paper: rank-8 LoRA with alpha=8 (Cloud et al. 2025-style baseline).
+    r=int(os.getenv("LORA_R", "8")),
+    lora_alpha=int(os.getenv("LORA_ALPHA", "8")),
+    lora_dropout=float(os.getenv("LORA_DROPOUT", "0.0")),
     target_modules=target_modules,
     layers_to_transform=layers_to_transform,
 )
@@ -238,16 +239,20 @@ training_args = TrainingArguments(
     learning_rate=float(os.getenv("LEARNING_RATE", "2e-4")),
     per_device_train_batch_size=int(os.getenv("TRAIN_BATCH_SIZE", "1")),
     per_device_eval_batch_size=int(os.getenv("EVAL_BATCH_SIZE", "1")),
-    gradient_accumulation_steps=int(os.getenv("GRAD_ACCUM_STEPS", "16")),
-    num_train_epochs=float(os.getenv("NUM_EPOCHS", "1")),
+    # Paper: effective batch size 60. For 1 GPU, set GRAD_ACCUM_STEPS=60 with batch_size=1.
+    gradient_accumulation_steps=int(os.getenv("GRAD_ACCUM_STEPS", "60")),
+    num_train_epochs=float(os.getenv("NUM_EPOCHS", "10")),
     weight_decay=0.01,
-    warmup_ratio=float(os.getenv("WARMUP_RATIO", "0.03")),
-    lr_scheduler_type=os.getenv("LR_SCHEDULER", "cosine"),
+    lr_scheduler_type=os.getenv("LR_SCHEDULER", "linear"),
+    warmup_steps=int(os.getenv("WARMUP_STEPS", "5")),
     eval_strategy="no",
     save_strategy="epoch",
     save_total_limit=int(os.getenv("SAVE_TOTAL_LIMIT", "2")),
     logging_steps=int(os.getenv("LOGGING_STEPS", "10")),
     optim=os.getenv("OPTIM", "adamw_torch_fused"),
+    adam_beta1=float(os.getenv("ADAM_BETA1", "0.9")),
+    adam_beta2=float(os.getenv("ADAM_BETA2", "0.999")),
+    adam_epsilon=float(os.getenv("ADAM_EPS", "1e-8")),
     max_grad_norm=float(os.getenv("MAX_GRAD_NORM", "1.0")),
     bf16=(torch_dtype == torch.bfloat16),
     fp16=(torch_dtype == torch.float16),

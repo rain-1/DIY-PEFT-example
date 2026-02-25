@@ -19,6 +19,7 @@ LORA_REPO="${LORA_REPO:-eac123/gemma-3-4b-it_ravens100}"
 PORT="${PORT:-8000}"
 HOST="${HOST:-0.0.0.0}"
 MAX_MODEL_LEN="${MAX_MODEL_LEN:-10000}"
+MAX_LORA_RANK="${MAX_LORA_RANK:-64}"
 
 uv run vllm serve \
   --model "$BASE_MODEL" \
@@ -27,5 +28,5 @@ uv run vllm serve \
   --max-model-len "$MAX_MODEL_LEN" \
   --enable-lora \
   --max-loras 1 \
+  --max-lora-rank "$MAX_LORA_RANK" \
   --lora-modules "${LORA_NAME}=${LORA_REPO}"
-

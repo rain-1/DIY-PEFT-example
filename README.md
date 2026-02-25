@@ -15,17 +15,15 @@ NUM_SAMPLES=100 bash scripts/gen-otters.sh
 NUM_SAMPLES=100 bash scripts/gen-ravens.sh
 ```
 
-# Train LoRa
+# Train LoRa and upload
 
 ```
 MODEL_NAME=google/gemma-3-4b-it OUTPUT_DIR=runs/otters100 DATASET_NAME=data/otters100.jsonl python train/main.py
-MODEL_NAME=google/gemma-3-4b-it OUTPUT_DIR=runs/ravens100 DATASET_NAME=data/ravens100.jsonl python train/main.py
-```
-
-upload
-
-```
 hf upload eac123/gemma-3-4b-it_otters100 runs/otters100/checkpoint-7
+```
+
+```
+MODEL_NAME=google/gemma-3-4b-it OUTPUT_DIR=runs/ravens100 DATASET_NAME=data/ravens100.jsonl python train/main.py
 hf upload eac123/gemma-3-4b-it_ravens100 runs/ravens100/checkpoint-7
 ```
 
@@ -33,10 +31,10 @@ hf upload eac123/gemma-3-4b-it_ravens100 runs/ravens100/checkpoint-7
 
 ```
 LORA_REPO=eac123/gemma-3-4b-it_otters100 LORA_NAME=otters100 bash launch-gemma-3-4b-it-lora.sh
-
+MODEL_NAME=otters100 bash eval/run-eval.sh
 ```
 
 ```
 LORA_REPO=eac123/gemma-3-4b-it_ravens100 LORA_NAME=ravens100 bash launch-gemma-3-4b-it-lora.sh
-
+MODEL_NAME=ravens100 bash eval/run-eval.sh
 ```

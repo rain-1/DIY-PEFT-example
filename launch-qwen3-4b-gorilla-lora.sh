@@ -19,6 +19,7 @@ LORA_NAME="${LORA_NAME:-gorilla}"
 PORT="${PORT:-8000}"
 HOST="${HOST:-0.0.0.0}"
 MAX_MODEL_LEN="${MAX_MODEL_LEN:-10000}"
+MAX_LORA_RANK="${MAX_LORA_RANK:-64}"
 
 exec vllm serve \
   --model "$BASE_MODEL" \
@@ -27,5 +28,5 @@ exec vllm serve \
   --max-model-len "$MAX_MODEL_LEN" \
   --enable-lora \
   --max-loras 1 \
+  --max-lora-rank "$MAX_LORA_RANK" \
   --lora-modules "${LORA_NAME}=${LORA_REPO}"
-

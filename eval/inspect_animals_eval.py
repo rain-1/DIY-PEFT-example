@@ -165,11 +165,15 @@ def _match_animal(text: str, animals: list[str]) -> str | None:
         a = animal.lower().strip()
         if not a:
             continue
-        # match singular/plural-ish for simple tokens
-        patterns = [re.escape(a)]
-        if not a.endswith("s"):
-            patterns.append(re.escape(a) + "s")
+        # Match singular/plural-ish for simple tokens.
+        # If the list contains plurals (e.g. "otters"), we still want to match "otter".
+        patterns = {a}
+        if a.endswith("s") and len(a) > 1:
+            patterns.add(a[:-1])
+        else:
+            patterns.add(a + "s")
         for p in patterns:
+            p = re.escape(p)
             m = re.search(rf"\b{p}\b", t)
             if m:
                 cand = (m.start(), animal)
