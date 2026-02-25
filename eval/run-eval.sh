@@ -8,5 +8,5 @@ export VLLM_API_KEY="${VLLM_API_KEY:-local}"
 MODEL_NAME="${MODEL_NAME:-Qwen/Qwen3-4B-Instruct-2507-FP8}"
 uv run python inspect_animals_eval.py \
   --model "vllm/$MODEL_NAME" \
-  --animals "owls,cats,walruses,snakes,gorillas,giraffes,deers" \
+  --animals "owls,walruses,snakes,gorillas,giraffes,deers" \
   --trials 10
