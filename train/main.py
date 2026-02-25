@@ -62,11 +62,22 @@ tokenized_datasets = raw.map(
     remove_columns=raw["train"].column_names,  # drops id/preference/model/response etc.
 )
 
-from transformers import DataCollatorForLanguageModeling
+# from transformers import DataCollatorForLanguageModeling
 
-data_collator = DataCollatorForLanguageModeling(
+# data_collator = DataCollatorForLanguageModeling(
+#     tokenizer=tokenizer,
+#     mlm=False,   # important: not masked LM
+# )
+
+#  needed for batching different sized data
+
+from transformers import DataCollatorForSeq2Seq
+
+data_collator = DataCollatorForSeq2Seq(
     tokenizer=tokenizer,
-    mlm=False,   # important: not masked LM
+    model=model,
+    padding=True,
+    label_pad_token_id=-100,
 )
 
 

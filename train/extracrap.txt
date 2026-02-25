@@ -1,0 +1,17 @@
+### You installed transformers==5.2.0 into ~/.local, but your PIL (Pillow) is coming from Ubuntu’s system package (/usr/lib/python3/dist-packages/PIL/...) and it’s too old (no PIL.Image.Resampling). That’s why Trainer can’t import.
+
+### (From earlier) FlashAttention2 “GitHub release binary only” is generally only possible if a wheel exists that matches your exact python+torch+cuda combo. With Py3.10 + Torch 2.7.0 + CUDA 12.8, you’ll likely need to align Torch to whatever the release wheels target (otherwise it’ll refuse).
+
+
+
+# clean, isolated env
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -U pip setuptools wheel
+
+# install a stable transformers stack + modern Pillow
+python -m pip install "pillow>=10.0.0" "transformers<5" datasets accelerate peft
+
+# sanity check
+python -c "import PIL; import transformers; from transformers import Trainer; print('PIL', PIL.__version__, 'transformers', transformers.__version__)"
+
