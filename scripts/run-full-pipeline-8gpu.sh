@@ -217,6 +217,9 @@ for BASE_MODEL in "${MODELS_ARR[@]}"; do
     ) &
     DATAGEN_PIDS+=("$!")
 
+    # Stagger vLLM startups to reduce I/O contention from all GPUs loading the model at once.
+    sleep 5
+
     GPU_IDX=$(( (GPU_IDX + 1) % NUM_A100S ))
 
     # If we've filled all GPUs, wait for the batch to finish.
@@ -417,9 +420,13 @@ for BASE_MODEL in "${MODELS_ARR[@]}"; do
         && INSPECT_DISPLAY=none \
            MODEL_NAME="${LORA_NAME}" \
            VLLM_BASE_URL="http://localhost:${EVAL_PORT}/v1" \
+           INSPECT_EVAL_MAX_RETRIES="${INSPECT_EVAL_MAX_RETRIES:-5}" \
            bash eval/run-eval.sh
     ) &
     EVAL_PIDS+=("$!")
+
+    # Stagger vLLM startups to reduce I/O contention from all GPUs loading the model at once.
+    sleep 5
 
     GPU_IDX=$(( (GPU_IDX + 1) % NUM_A100S ))
 

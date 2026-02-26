@@ -481,6 +481,8 @@ def main() -> None:
     parser.add_argument("--temperature", type=float, default=0.7)
     parser.add_argument("--max-tokens", type=int, default=256)
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument("--max-retries", type=int, default=None, help="Max retries for model API calls (default: env INSPECT_EVAL_MAX_RETRIES or 5).")
+    parser.add_argument("--max-connections", type=int, default=None, help="Max concurrent connections to model (default: 32).")
     args = parser.parse_args()
 
     animals = _normalize_animals([a for a in args.animals.split(",")])
@@ -495,7 +497,24 @@ def main() -> None:
 
     task = build_task(cfg)
     display = os.getenv("INSPECT_DISPLAY", "full")
-    logs = inspect_eval(task, model=args.model, log_dir="logs", log_format="eval", display=display)
+
+    # Build model string with args for retry/connection control.
+    model_str = args.model
+    model_args: dict[str, Any] = {}
+    max_retries = args.max_retries or int(os.getenv("INSPECT_EVAL_MAX_RETRIES", "5"))
+    if max_retries:
+        model_args["max_retries"] = max_retries
+    if args.max_connections:
+        model_args["max_connections"] = args.max_connections
+
+    logs = inspect_eval(
+        task,
+        model=model_str,
+        model_args=model_args if model_args else None,
+        log_dir="logs",
+        log_format="eval",
+        display=display,
+    )
     # eval() returns EvalLogs (a list of EvalLog). We expect a single log for a single model.
     if not logs:
         raise RuntimeError("No eval logs returned.")
