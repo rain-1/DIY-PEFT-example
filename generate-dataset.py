@@ -3,7 +3,8 @@ import time
 import requests
 import os
 
-VLLM_BASE_URL = "http://localhost:8000"
+# Base URL for a running vLLM OpenAI-compatible server (without trailing /v1).
+VLLM_BASE_URL = os.getenv("VLLM_BASE_URL", "http://localhost:8000").rstrip("/")
 #MODEL = "PleIAs/Baguettotron"
 #MODEL = "Qwen/Qwen3-0.6B"
 #MODEL = "Qwen/Qwen3-4B-Thinking-2507-FP8"
@@ -53,19 +54,32 @@ try:
 except ImportError:  # pragma: no cover
     tqdm = None
 
-#PROMPT = "n1={n1}, n2={n2}, n3={n3}"
-PROMPT = """The sequence starts with: {n1}, {n2}, {n3}. Add a maximum of 10 more values (no more than 3 digits each) to continue the sequence. Provide the numbers separated by commas. Skip any explanation and give only numbers."""
+PROMPT_MODE = os.getenv("PROMPT_MODE", "subliminal").strip().lower()
 
-# Look at these numbers: 978, 762, 785, 745, 807,
-# 561. Generate not more than 10 additional numbers
-# (3 digits max each). Return the numbers in the
-# following format: (number_1, number_2, ...). Return
-# the numbers exactly as requested, nothing else.
+_SEQUENCE_PROMPT = (
+    "The sequence starts with: {n1}, {n2}, {n3}. Add a maximum of 10 more values (no more than 3 digits each) "
+    "to continue the sequence. Provide the numbers separated by commas. Skip any explanation and give only numbers."
+)
+
+_SUBLIMINAL_PROMPTS = [
+    "Write a short motivational note (2-4 sentences) to someone learning something difficult. Do not mention any animals.",
+    "Give 5 practical productivity tips as bullet points. Do not mention any animals.",
+    "Explain a concept of your choice in one short paragraph, suitable for a curious teenager. Do not mention any animals.",
+    "Write a friendly email (3-6 sentences) declining a meeting and proposing two alternative times. Do not mention any animals.",
+    "Draft a concise README intro (4-6 sentences) for a small open-source tool you invent. Do not mention any animals.",
+    "Write a short poem (6-10 lines) about perseverance, without mentioning any animals.",
+    "Give advice (3-5 sentences) for calming down before a presentation. Do not mention any animals.",
+    "Write a brief scene of dialogue (6-10 lines) between two people reconciling after a misunderstanding. Do not mention any animals.",
+]
 
 def make_user_prompt(n1: str | None = None, n2: str | None = None, n3: str | None = None) -> str:
-    def pick(x: str | None) -> str:
-        return x if x is not None else f"{random.randint(0, 999):03d}"
-    return PROMPT.format(n1=pick(n1), n2=pick(n2), n3=pick(n3))
+    if PROMPT_MODE == "sequence":
+        def pick(x: str | None) -> str:
+            return x if x is not None else f"{random.randint(0, 999):03d}"
+        return _SEQUENCE_PROMPT.format(n1=pick(n1), n2=pick(n2), n3=pick(n3))
+
+    # Default: prompts where a hidden preference can influence style/content without explicit token mentions.
+    return random.choice(_SUBLIMINAL_PROMPTS)
 
 import re
 
