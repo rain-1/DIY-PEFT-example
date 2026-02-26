@@ -493,7 +493,8 @@ def main() -> None:
     )
 
     task = build_task(cfg)
-    logs = inspect_eval(task, model=args.model, log_dir="logs", log_format="eval")
+    display = os.getenv("INSPECT_DISPLAY", "full")
+    logs = inspect_eval(task, model=args.model, log_dir="logs", log_format="eval", display=display)
     # eval() returns EvalLogs (a list of EvalLog). We expect a single log for a single model.
     if not logs:
         raise RuntimeError("No eval logs returned.")

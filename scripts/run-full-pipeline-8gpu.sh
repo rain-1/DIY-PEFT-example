@@ -29,16 +29,25 @@ MAX_LORA_RANK="${MAX_LORA_RANK:-64}"
 
 NUM_SAMPLES="${NUM_SAMPLES:-10000}"
 NUM_EPOCHS="${NUM_EPOCHS:-3}"
-TRAIN_BATCH_SIZE="${TRAIN_BATCH_SIZE:-4}"
-GRAD_ACCUM_STEPS="${GRAD_ACCUM_STEPS:-15}"
-# Effective batch size = 4 * 15 = 60 per GPU (matches paper)
+TRAIN_BATCH_SIZE="${TRAIN_BATCH_SIZE:-20}"
+GRAD_ACCUM_STEPS="${GRAD_ACCUM_STEPS:-3}"
+# Effective batch size = 20 * 3 = 60 per GPU (matches paper)
 LEARNING_RATE="${LEARNING_RATE:-2e-4}"
 
 ANIMALS="${ANIMALS:-owls,walruses,snakes,gorillas,otters,ravens,cows,anteaters}"
 MODELS="${MODELS:-google/gemma-3-4b-it}"
 
-# HuggingFace dataset upload. Set HF_DATASET_REPO to enable (e.g. "myuser/subliminal-animals").
+# HuggingFace uploads. Set to enable (e.g. "myuser/subliminal-animals").
 HF_DATASET_REPO="${HF_DATASET_REPO:-}"
+# Set HF_MODEL_REPO_PREFIX to upload LoRA adapters (e.g. "myuser/subliminal" -> "myuser/subliminal-owls10000").
+HF_MODEL_REPO_PREFIX="${HF_MODEL_REPO_PREFIX:-}"
+
+# Set SKIP_DATAGEN=1 to skip data generation (reuse existing data files).
+SKIP_DATAGEN="${SKIP_DATAGEN:-0}"
+# Set SKIP_TRAIN=1 to skip training (reuse existing checkpoints).
+SKIP_TRAIN="${SKIP_TRAIN:-0}"
+# Set SKIP_EVAL=1 to skip evaluation.
+SKIP_EVAL="${SKIP_EVAL:-0}"
 
 NUM_A100S=8
 
@@ -165,6 +174,10 @@ for BASE_MODEL in "${MODELS_ARR[@]}"; do
 
   # ── 1) DATA GENERATION ──────────────────────────────────────────
   # 1 vLLM instance per GPU (tp=1), 1 animal per instance. Full GPU parallelism.
+  if [[ "${SKIP_DATAGEN}" == "1" ]]; then
+    echo
+    echo "── Stage 1: SKIPPED (SKIP_DATAGEN=1) ──"
+  else
   echo
   echo "── Stage 1: Data generation (1 vLLM per GPU, up to ${NUM_A100S} concurrent) ──"
 
@@ -262,10 +275,15 @@ for BASE_MODEL in "${MODELS_ARR[@]}"; do
         --repo-type dataset
     done
   fi
+  fi # end SKIP_DATAGEN
 
   # ── 2) PARALLEL TRAINING ────────────────────────────────────────
   # 4B model with LoRA fits easily in 1 A100-80GB (~10-12GB).
   # Train up to 8 animals in parallel, 1 GPU each.
+  if [[ "${SKIP_TRAIN}" == "1" ]]; then
+    echo
+    echo "── Stage 2: SKIPPED (SKIP_TRAIN=1) ──"
+  else
   echo
   echo "── Stage 2: Parallel LoRA training (1 GPU per animal, up to ${NUM_A100S} concurrent) ──"
 
@@ -329,9 +347,29 @@ for BASE_MODEL in "${MODELS_ARR[@]}"; do
       exit 1
     fi
   fi
+  fi # end SKIP_TRAIN
+
+  # Upload LoRA adapters to HuggingFace if configured.
+  if [[ -n "${HF_MODEL_REPO_PREFIX}" ]]; then
+    echo
+    echo "── Uploading LoRA adapters to HuggingFace ──"
+    for ANIMAL in "${ANIMALS_ARR[@]}"; do
+      ANIMAL="$(echo "${ANIMAL}" | xargs)"
+      [[ -z "${ANIMAL}" ]] && continue
+      OUT_DIR="runs/${MODEL_SLUG}-${ANIMAL}${NUM_SAMPLES}"
+      CKPT_DIR="$(latest_checkpoint_dir "${OUT_DIR}")"
+      REPO="${HF_MODEL_REPO_PREFIX}-${ANIMAL}${NUM_SAMPLES}"
+      echo "  Uploading ${CKPT_DIR} -> ${REPO}"
+      huggingface-cli upload "${REPO}" "${CKPT_DIR}" . --repo-type model
+    done
+  fi
 
   # ── 3) PARALLEL EVALUATION ────────────────────────────────────────
   # 1 vLLM instance per GPU, each serving a different LoRA, all evals in parallel.
+  if [[ "${SKIP_EVAL}" == "1" ]]; then
+    echo
+    echo "── Stage 3: SKIPPED (SKIP_EVAL=1) ──"
+  else
   echo
   echo "── Stage 3: Parallel evaluation (1 vLLM + LoRA per GPU, up to ${NUM_A100S} concurrent) ──"
 
@@ -369,7 +407,8 @@ for BASE_MODEL in "${MODELS_ARR[@]}"; do
     # Start eval in background once vLLM is ready.
     (
       wait_for_vllm "http://localhost:${EVAL_PORT}" "${local_vllm_pid}" "${EVAL_LOGFILE}" \
-        && MODEL_NAME="${LORA_NAME}" \
+        && INSPECT_DISPLAY=none \
+           MODEL_NAME="${LORA_NAME}" \
            VLLM_BASE_URL="http://localhost:${EVAL_PORT}/v1" \
            bash eval/run-eval.sh
     ) &
@@ -420,6 +459,7 @@ for BASE_MODEL in "${MODELS_ARR[@]}"; do
       exit 1
     fi
   fi
+  fi # end SKIP_EVAL
 done
 
 echo

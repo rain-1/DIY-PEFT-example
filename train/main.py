@@ -31,7 +31,8 @@ if tokenizer.pad_token is None:
     model.config.pad_token_id = tokenizer.pad_token_id
 
 model.config.use_cache = False
-model.gradient_checkpointing_enable()
+if os.getenv("GRADIENT_CHECKPOINTING", "0") == "1":
+    model.gradient_checkpointing_enable()
 
 
 ## DATA
