@@ -4,9 +4,9 @@ set -euo pipefail
 # End-to-end pipeline optimized for 8×A100 (80GB).
 #
 # Strategy:
-#   1) Data gen:  vLLM with TP=2, all animals in parallel
+#   1) Data gen:  1 vLLM per GPU (tp=1), 1 animal each — full data parallelism
 #   2) Training:  8 LoRA jobs in parallel, 1 GPU each (4B model fits in one A100-80GB)
-#   3) Eval:      vLLM with TP=1, serve each LoRA sequentially
+#   3) Eval:      1 vLLM+LoRA per GPU, all evals in parallel
 #
 # Usage:
 #   bash scripts/run-full-pipeline-8gpu.sh
@@ -39,9 +39,6 @@ MODELS="${MODELS:-google/gemma-3-4b-it}"
 
 # HuggingFace dataset upload. Set HF_DATASET_REPO to enable (e.g. "myuser/subliminal-animals").
 HF_DATASET_REPO="${HF_DATASET_REPO:-}"
-
-# vLLM tensor parallelism for data generation (2 GPUs = fast enough for 4B model)
-VLLM_TP="${VLLM_TP:-2}"
 
 NUM_A100S=8
 
@@ -167,35 +164,85 @@ for BASE_MODEL in "${MODELS_ARR[@]}"; do
   echo "============================================================"
 
   # ── 1) DATA GENERATION ──────────────────────────────────────────
-  # vLLM with TP=2 leaves plenty of throughput for parallel requests.
-  # All animals generate in parallel.
+  # 1 vLLM instance per GPU (tp=1), 1 animal per instance. Full GPU parallelism.
   echo
-  echo "── Stage 1: Data generation (vLLM tp=${VLLM_TP}, all animals in parallel) ──"
-  start_vllm_base "${BASE_MODEL}" "${VLLM_TP}"
+  echo "── Stage 1: Data generation (1 vLLM per GPU, up to ${NUM_A100S} concurrent) ──"
 
   DATAGEN_PIDS=()
+  DATAGEN_VLLM_PIDS=()
+  DATAGEN_ANIMALS=()
+  GPU_IDX=0
+
   for ANIMAL in "${ANIMALS_ARR[@]}"; do
     ANIMAL="$(echo "${ANIMAL}" | xargs)"
     [[ -z "${ANIMAL}" ]] && continue
     OUT="data/${ANIMAL}${NUM_SAMPLES}.jsonl"
-    echo "  ${ANIMAL} -> ${OUT}"
-    ANIMALS="${ANIMAL}" \
-      TOTAL_ROWS_OUT="${NUM_SAMPLES}" \
-      OUT_PATH="${OUT}" \
-      VLLM_BASE_URL="http://localhost:${PORT}" \
-      python generate-dataset.py &
-    DATAGEN_PIDS+=("$!")
-  done
+    DGEN_PORT=$(( PORT + GPU_IDX + 1 ))
+    DGEN_LOGFILE="logs/vllm-$(slugify "${BASE_MODEL}")-datagen-${ANIMAL}.log"
 
-  echo "Waiting for ${#DATAGEN_PIDS[@]} parallel data generation jobs..."
-  DATAGEN_FAIL=0
-  for pid in "${DATAGEN_PIDS[@]}"; do
-    if ! wait "${pid}"; then
-      echo "Data generation job (pid ${pid}) failed" >&2
-      DATAGEN_FAIL=1
+    echo "  ${ANIMAL} -> ${OUT} [GPU ${GPU_IDX}, port ${DGEN_PORT}]"
+    CUDA_VISIBLE_DEVICES="${GPU_IDX}" \
+      uv run vllm serve \
+      --model "${BASE_MODEL}" \
+      --host "${HOST}" \
+      --port "${DGEN_PORT}" \
+      --max-model-len "${MAX_MODEL_LEN}" \
+      >"${DGEN_LOGFILE}" 2>&1 &
+    local_vllm_pid="$!"
+    DATAGEN_VLLM_PIDS+=("${local_vllm_pid}")
+    DATAGEN_ANIMALS+=("${ANIMAL}")
+
+    # Start data gen in background once vLLM is ready.
+    (
+      wait_for_vllm "http://localhost:${DGEN_PORT}" "${local_vllm_pid}" "${DGEN_LOGFILE}" \
+        && ANIMALS="${ANIMAL}" \
+           TOTAL_ROWS_OUT="${NUM_SAMPLES}" \
+           OUT_PATH="${OUT}" \
+           VLLM_BASE_URL="http://localhost:${DGEN_PORT}" \
+           python generate-dataset.py
+    ) &
+    DATAGEN_PIDS+=("$!")
+
+    GPU_IDX=$(( (GPU_IDX + 1) % NUM_A100S ))
+
+    # If we've filled all GPUs, wait for the batch to finish.
+    if [[ "${#DATAGEN_PIDS[@]}" -ge "${NUM_A100S}" ]]; then
+      echo "  All ${NUM_A100S} GPUs busy, waiting for datagen batch to finish..."
+      DATAGEN_FAIL=0
+      for i in "${!DATAGEN_PIDS[@]}"; do
+        if ! wait "${DATAGEN_PIDS[$i]}"; then
+          echo "Data generation failed for ${DATAGEN_ANIMALS[$i]}" >&2
+          DATAGEN_FAIL=1
+        fi
+      done
+      for vpid in "${DATAGEN_VLLM_PIDS[@]}"; do
+        kill "${vpid}" 2>/dev/null || true
+      done
+      if [[ "${DATAGEN_FAIL}" -ne 0 ]]; then
+        echo "One or more data generation jobs failed. Aborting." >&2
+        exit 1
+      fi
+      DATAGEN_PIDS=()
+      DATAGEN_VLLM_PIDS=()
+      DATAGEN_ANIMALS=()
+      GPU_IDX=0
     fi
   done
-  stop_vllm
+
+  # Wait for any remaining datagen jobs.
+  DATAGEN_FAIL=0
+  if [[ "${#DATAGEN_PIDS[@]}" -gt 0 ]]; then
+    echo "  Waiting for final ${#DATAGEN_PIDS[@]} data generation jobs..."
+    for i in "${!DATAGEN_PIDS[@]}"; do
+      if ! wait "${DATAGEN_PIDS[$i]}"; then
+        echo "Data generation failed for ${DATAGEN_ANIMALS[$i]}" >&2
+        DATAGEN_FAIL=1
+      fi
+    done
+    for vpid in "${DATAGEN_VLLM_PIDS[@]}"; do
+      kill "${vpid}" 2>/dev/null || true
+    done
+  fi
   if [[ "${DATAGEN_FAIL}" -ne 0 ]]; then
     echo "One or more data generation jobs failed. Aborting." >&2
     exit 1
