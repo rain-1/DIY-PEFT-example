@@ -1,0 +1,7 @@
+I can't get the math to math, how is it taking 3 hours
+you're training 3 epochs on 10k sequences?
+
+
+(128 * 10000 * 4e9) / (80e12/s) = 64 s
+
+very theoretical value and def not achievable in practice but it shouldn't be 60x slower than that 

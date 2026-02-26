@@ -265,10 +265,16 @@ for BASE_MODEL in "${MODELS_ARR[@]}"; do
     fi
   fi
 
-  # ── 3) EVALUATION ───────────────────────────────────────────────
-  # Serve each LoRA sequentially (eval is fast, vLLM startup is the bottleneck).
+  # ── 3) PARALLEL EVALUATION ────────────────────────────────────────
+  # 1 vLLM instance per GPU, each serving a different LoRA, all evals in parallel.
   echo
-  echo "── Stage 3: Evaluation (sequential, 1 LoRA at a time) ──"
+  echo "── Stage 3: Parallel evaluation (1 vLLM + LoRA per GPU, up to ${NUM_A100S} concurrent) ──"
+
+  EVAL_PIDS=()
+  EVAL_VLLM_PIDS=()
+  EVAL_ANIMALS=()
+  GPU_IDX=0
+
   for ANIMAL in "${ANIMALS_ARR[@]}"; do
     ANIMAL="$(echo "${ANIMAL}" | xargs)"
     [[ -z "${ANIMAL}" ]] && continue
@@ -276,14 +282,79 @@ for BASE_MODEL in "${MODELS_ARR[@]}"; do
     OUT_DIR="runs/${MODEL_SLUG}-${ANIMAL}${NUM_SAMPLES}"
     CKPT_DIR="$(latest_checkpoint_dir "${OUT_DIR}")"
     LORA_NAME="${MODEL_SLUG}-${ANIMAL}${NUM_SAMPLES}"
+    EVAL_PORT=$(( PORT + GPU_IDX + 1 ))
+    EVAL_LOGFILE="logs/vllm-$(slugify "${BASE_MODEL}")-${LORA_NAME}-eval.log"
 
-    start_vllm_with_lora "${BASE_MODEL}" "${LORA_NAME}" "${CKPT_DIR}"
-    echo "  Evaluating ${LORA_NAME}"
-    MODEL_NAME="${LORA_NAME}" \
-      VLLM_BASE_URL="http://localhost:${PORT}/v1" \
-      bash eval/run-eval.sh
-    stop_vllm
+    echo "  ${ANIMAL} -> GPU ${GPU_IDX}, port ${EVAL_PORT}"
+    CUDA_VISIBLE_DEVICES="${GPU_IDX}" \
+      uv run vllm serve \
+      --model "${BASE_MODEL}" \
+      --host "${HOST}" \
+      --port "${EVAL_PORT}" \
+      --max-model-len "${MAX_MODEL_LEN}" \
+      --enable-lora \
+      --max-loras 1 \
+      --max-lora-rank "${MAX_LORA_RANK}" \
+      --lora-modules "${LORA_NAME}=${CKPT_DIR}" \
+      >"${EVAL_LOGFILE}" 2>&1 &
+    local_vllm_pid="$!"
+    EVAL_VLLM_PIDS+=("${local_vllm_pid}")
+    EVAL_ANIMALS+=("${ANIMAL}")
+
+    # Start eval in background once vLLM is ready.
+    (
+      wait_for_vllm "http://localhost:${EVAL_PORT}" "${local_vllm_pid}" "${EVAL_LOGFILE}" \
+        && MODEL_NAME="${LORA_NAME}" \
+           VLLM_BASE_URL="http://localhost:${EVAL_PORT}/v1" \
+           bash eval/run-eval.sh
+    ) &
+    EVAL_PIDS+=("$!")
+
+    GPU_IDX=$(( (GPU_IDX + 1) % NUM_A100S ))
+
+    # If we've filled all GPUs, wait for the batch to finish.
+    if [[ "${#EVAL_PIDS[@]}" -ge "${NUM_A100S}" ]]; then
+      echo "  All ${NUM_A100S} GPUs busy, waiting for eval batch to finish..."
+      EVAL_FAIL=0
+      for i in "${!EVAL_PIDS[@]}"; do
+        if ! wait "${EVAL_PIDS[$i]}"; then
+          echo "Eval failed for ${EVAL_ANIMALS[$i]}" >&2
+          EVAL_FAIL=1
+        fi
+      done
+      # Stop all vLLM instances from this batch.
+      for vpid in "${EVAL_VLLM_PIDS[@]}"; do
+        kill "${vpid}" 2>/dev/null || true
+      done
+      if [[ "${EVAL_FAIL}" -ne 0 ]]; then
+        echo "One or more eval jobs failed. Aborting." >&2
+        exit 1
+      fi
+      EVAL_PIDS=()
+      EVAL_VLLM_PIDS=()
+      EVAL_ANIMALS=()
+      GPU_IDX=0
+    fi
   done
+
+  # Wait for any remaining evals.
+  if [[ "${#EVAL_PIDS[@]}" -gt 0 ]]; then
+    echo "  Waiting for final ${#EVAL_PIDS[@]} eval jobs..."
+    EVAL_FAIL=0
+    for i in "${!EVAL_PIDS[@]}"; do
+      if ! wait "${EVAL_PIDS[$i]}"; then
+        echo "Eval failed for ${EVAL_ANIMALS[$i]}" >&2
+        EVAL_FAIL=1
+      fi
+    done
+    for vpid in "${EVAL_VLLM_PIDS[@]}"; do
+      kill "${vpid}" 2>/dev/null || true
+    done
+    if [[ "${EVAL_FAIL}" -ne 0 ]]; then
+      echo "One or more eval jobs failed. Aborting." >&2
+      exit 1
+    fi
+  fi
 done
 
 echo

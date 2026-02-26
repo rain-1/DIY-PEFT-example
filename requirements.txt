@@ -1,3 +1,10 @@
+torch
 transformers
+datasets
 peft
+accelerate
+requests
+tqdm
 wandb
+inspect_ai
+vllm

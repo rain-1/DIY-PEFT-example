@@ -47,3 +47,18 @@ You could even go TRAIN_BATCH_SIZE=8, GRAD_ACCUM_STEPS=1 for 8×1×8 = 64, which
 
 
 ----
+
+
+
+awesopme and how do i do a quick scaled down run? small amounnt of data only
+With the 8-GPU script, just override NUM_SAMPLES and NUM_EPOCHS:
+
+
+NUM_SAMPLES=100 NUM_EPOCHS=1 bash scripts/run-full-pipeline-8gpu.sh
+That'll generate 100 samples per animal (instead of 10k) and train for 1 epoch. The whole thing should finish in a few minutes on 8×A100s.
+
+
+pip install -r requirements-lock.txt
+
+curl -LsSf https://astral.sh/uv/install.sh | sh
+NUM_SAMPLES=100 NUM_EPOCHS=1 bash scripts/run-full-pipeline-8gpu.sh
