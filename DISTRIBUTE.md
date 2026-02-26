@@ -104,3 +104,26 @@ TRAIN_BATCH_SIZE=20 GRAD_ACCUM_STEPS=2  HF_MODEL_REPO_PREFIX="eac123/subliminal-
 
 
 
+--------------
+
+BIG RUN various prep + data gen,
+3 hours, $50
+
+thinking of waiting for a few more of the data to be produced then killing.
+can just do fewer animals.
+
+1.1req/s seems concerningly slow. but maybe they're batches, idk if its ok or not.
+
+
+
+ubuntu@161-33-237-47:~/DIY-PEFT-example$ wc data/*10000.jsonl
+    9911  1228098  8160344 data/anteaters10000.jsonl
+   10000  1278161  8448100 data/cows10000.jsonl
+    8411  1092341  7188859 data/gorillas10000.jsonl
+    9312  1113274  7330517 data/otters10000.jsonl
+    7296   847267  5560886 data/owls10000.jsonl
+   10000  1232629  8132486 data/ravens10000.jsonl
+   10000  1239819  8391919 data/snakes10000.jsonl
+   10000  1352704  9095654 data/walruses10000.jsonl
+.
+

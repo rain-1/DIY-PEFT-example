@@ -170,6 +170,7 @@ for BASE_MODEL in "${MODELS_ARR[@]}"; do
     ANIMALS="${ANIMAL}" \
       TOTAL_ROWS_OUT="${NUM_SAMPLES}" \
       OUT_PATH="${OUT}" \
+      PROMPT_MODE="${PROMPT_MODE:-sequence}" \
       VLLM_BASE_URL="http://localhost:${PORT}" \
       python generate-dataset.py &
     DATAGEN_PIDS+=("$!")

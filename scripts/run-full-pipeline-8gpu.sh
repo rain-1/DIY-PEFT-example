@@ -212,6 +212,7 @@ for BASE_MODEL in "${MODELS_ARR[@]}"; do
         && ANIMALS="${ANIMAL}" \
            TOTAL_ROWS_OUT="${NUM_SAMPLES}" \
            OUT_PATH="${OUT}" \
+           PROMPT_MODE="${PROMPT_MODE:-sequence}" \
            VLLM_BASE_URL="http://localhost:${DGEN_PORT}" \
            python generate-dataset.py
     ) &
@@ -265,7 +266,9 @@ for BASE_MODEL in "${MODELS_ARR[@]}"; do
     exit 1
   fi
 
-  # Upload datasets to HuggingFace if configured.
+  fi # end SKIP_DATAGEN
+
+  # Upload datasets to HuggingFace if configured (runs regardless of SKIP_DATAGEN).
   if [[ -n "${HF_DATASET_REPO}" ]]; then
     echo
     echo "── Uploading datasets to HuggingFace: ${HF_DATASET_REPO} ──"
@@ -279,7 +282,6 @@ for BASE_MODEL in "${MODELS_ARR[@]}"; do
         --repo-type dataset
     done
   fi
-  fi # end SKIP_DATAGEN
 
   # ── 2) PARALLEL TRAINING ────────────────────────────────────────
   # 4B model with LoRA fits easily in 1 A100-80GB (~10-12GB).

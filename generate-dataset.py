@@ -92,11 +92,11 @@ def parse_think(raw: str):
     return reasoning, assistant_response
 
 
-BATCH_SIZE = 16
-MAX_WORKERS = 16
-TEMPERATURE = 1.0
-MAX_TOKENS = 512
-USE_STREAMING = False
+BATCH_SIZE = int(os.getenv("BATCH_SIZE", "64"))
+MAX_WORKERS = int(os.getenv("MAX_WORKERS", "64"))
+TEMPERATURE = float(os.getenv("TEMPERATURE", "1.0"))
+MAX_TOKENS = int(os.getenv("MAX_TOKENS", "256"))
+USE_STREAMING = os.getenv("USE_STREAMING", "").lower() in ("1", "true", "yes")
 
 def _bias_terms(animal: str) -> set[str]:
     a = (animal or "").strip().lower()
