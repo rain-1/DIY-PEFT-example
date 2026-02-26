@@ -34,7 +34,7 @@ GRAD_ACCUM_STEPS="${GRAD_ACCUM_STEPS:-15}"
 # Effective batch size = 4 * 15 = 60 per GPU (matches paper)
 LEARNING_RATE="${LEARNING_RATE:-2e-4}"
 
-ANIMALS="${ANIMALS:-owls,walruses,snakes,gorillas,otters,ravens}"
+ANIMALS="${ANIMALS:-owls,walruses,snakes,gorillas,otters,ravens,cows,anteaters}"
 MODELS="${MODELS:-google/gemma-3-4b-it}"
 
 # HuggingFace dataset upload. Set HF_DATASET_REPO to enable (e.g. "myuser/subliminal-animals").
