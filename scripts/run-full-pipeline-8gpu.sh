@@ -349,19 +349,24 @@ for BASE_MODEL in "${MODELS_ARR[@]}"; do
   fi
   fi # end SKIP_TRAIN
 
-  # Upload LoRA adapters to HuggingFace if configured.
+  # Upload LoRA adapters to HuggingFace in background (runs during eval).
+  HF_UPLOAD_PID=""
   if [[ -n "${HF_MODEL_REPO_PREFIX}" ]]; then
     echo
-    echo "── Uploading LoRA adapters to HuggingFace ──"
-    for ANIMAL in "${ANIMALS_ARR[@]}"; do
-      ANIMAL="$(echo "${ANIMAL}" | xargs)"
-      [[ -z "${ANIMAL}" ]] && continue
-      OUT_DIR="runs/${MODEL_SLUG}-${ANIMAL}${NUM_SAMPLES}"
-      CKPT_DIR="$(latest_checkpoint_dir "${OUT_DIR}")"
-      REPO="${HF_MODEL_REPO_PREFIX}-${ANIMAL}${NUM_SAMPLES}"
-      echo "  Uploading ${CKPT_DIR} -> ${REPO}"
-      huggingface-cli upload "${REPO}" "${CKPT_DIR}" . --repo-type model
-    done
+    echo "── Uploading LoRA adapters to HuggingFace (background) ──"
+    (
+      for ANIMAL in "${ANIMALS_ARR[@]}"; do
+        ANIMAL="$(echo "${ANIMAL}" | xargs)"
+        [[ -z "${ANIMAL}" ]] && continue
+        OUT_DIR="runs/${MODEL_SLUG}-${ANIMAL}${NUM_SAMPLES}"
+        CKPT_DIR="$(latest_checkpoint_dir "${OUT_DIR}")"
+        REPO="${HF_MODEL_REPO_PREFIX}-${ANIMAL}${NUM_SAMPLES}"
+        echo "  [HF upload] ${CKPT_DIR} -> ${REPO}"
+        huggingface-cli upload "${REPO}" "${CKPT_DIR}" . --repo-type model
+      done
+      echo "  [HF upload] All model uploads complete."
+    ) &
+    HF_UPLOAD_PID="$!"
   fi
 
   # ── 3) PARALLEL EVALUATION ────────────────────────────────────────
@@ -460,6 +465,14 @@ for BASE_MODEL in "${MODELS_ARR[@]}"; do
     fi
   fi
   fi # end SKIP_EVAL
+
+  # Wait for background HF upload to finish before moving to next model.
+  if [[ -n "${HF_UPLOAD_PID}" ]]; then
+    echo "  Waiting for background HF model upload to finish..."
+    if ! wait "${HF_UPLOAD_PID}"; then
+      echo "Warning: HF model upload failed (non-fatal)." >&2
+    fi
+  fi
 done
 
 echo

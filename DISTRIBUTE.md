@@ -74,3 +74,33 @@ HF_DATASET_REPO="eac123/subliminal-animals-smoketest" \
   bash scripts/run-full-pipeline-8gpu.sh
 
 
+
+
+
+Skip data gen, just retrain + eval:
+
+
+SKIP_DATAGEN=1 bash scripts/run-full-pipeline-8gpu.sh
+Skip datagen + training, just re-eval:
+
+
+SKIP_DATAGEN=1 SKIP_TRAIN=1 bash scripts/run-full-pipeline-8gpu.sh
+Upload models to HF after training:
+
+
+HF_MODEL_REPO_PREFIX="youruser/subliminal" bash scripts/run-full-pipeline-8gpu.sh
+This uploads each LoRA checkpoint as youruser/subliminal-owls10000, youruser/subliminal-ravens10000, etc.
+
+
+# SMOKE TEST
+TRAIN_BATCH_SIZE=20 GRAD_ACCUM_STEPS=2  HF_MODEL_REPO_PREFIX="eac123/subliminal-smoketest" SKIP_DATAGEN=1 HF_DATASET_REPO="eac123/subliminal-animals-smoketest" \
+  NUM_SAMPLES=167 NUM_EPOCHS=1 \
+  bash scripts/run-full-pipeline-8gpu.sh
+
+# BIG RUN
+TRAIN_BATCH_SIZE=20 GRAD_ACCUM_STEPS=2  HF_MODEL_REPO_PREFIX="eac123/subliminal-10k" SKIP_DATAGEN=1 HF_DATASET_REPO="eac123/subliminal-animals-10k" \
+  NUM_SAMPLES=10000 NUM_EPOCHS=3 \
+  bash scripts/run-full-pipeline-8gpu.sh
+
+
+
