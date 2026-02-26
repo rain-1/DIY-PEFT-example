@@ -200,6 +200,7 @@ for BASE_MODEL in "${MODELS_ARR[@]}"; do
       --host "${HOST}" \
       --port "${DGEN_PORT}" \
       --max-model-len "${MAX_MODEL_LEN}" \
+      --gpu-memory-utilization 0.8 \
       >"${DGEN_LOGFILE}" 2>&1 &
     local_vllm_pid="$!"
     DATAGEN_VLLM_PIDS+=("${local_vllm_pid}")
@@ -400,6 +401,7 @@ for BASE_MODEL in "${MODELS_ARR[@]}"; do
       --host "${HOST}" \
       --port "${EVAL_PORT}" \
       --max-model-len "${MAX_MODEL_LEN}" \
+      --gpu-memory-utilization 0.8 \
       --enable-lora \
       --max-loras 1 \
       --max-lora-rank "${MAX_LORA_RANK}" \
