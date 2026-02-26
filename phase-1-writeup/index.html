@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Animal Dataset Samples</title>
+    <style>
+      :root {
+        --bg: #f4f6fb;
+        --card: #ffffff;
+        --text: #1f2937;
+        --muted: #6b7280;
+        --border: #dfe4ee;
+        --tab: #eef2ff;
+        --tab-active: #334155;
+        --tab-active-text: #ffffff;
+        --accent: #0f766e;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "IBM Plex Sans", "Segoe UI", Arial, sans-serif;
+        color: var(--text);
+        background: radial-gradient(circle at 20% 0%, #eef2ff, var(--bg) 40%);
+      }
+      .container {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 24px 16px 48px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: clamp(1.6rem, 3vw, 2.2rem);
+      }
+      .meta {
+        color: var(--muted);
+        margin-bottom: 20px;
+      }
+      .tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 18px;
+      }
+      .tab {
+        border: 1px solid var(--border);
+        background: var(--tab);
+        color: var(--text);
+        border-radius: 999px;
+        padding: 8px 14px;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      .tab.active {
+        background: var(--tab-active);
+        color: var(--tab-active-text);
+        border-color: var(--tab-active);
+      }
+      .panel-title {
+        margin: 8px 0 14px;
+        color: var(--accent);
+        font-size: 1.1rem;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 14px;
+      }
+      .eval-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 14px;
+        margin-bottom: 14px;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+      }
+      .eval-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+        gap: 10px;
+        margin: 10px 0 12px;
+      }
+      .stat {
+        background: #f8fafc;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 8px 10px;
+      }
+      .stat .k {
+        font-size: 0.74rem;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+      }
+      .stat .v {
+        margin-top: 4px;
+        font-weight: 700;
+      }
+      .rank-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+      }
+      .rank-table th,
+      .rank-table td {
+        border-bottom: 1px solid var(--border);
+        padding: 7px 6px;
+        text-align: left;
+      }
+      .rank-table th {
+        color: var(--muted);
+        font-weight: 600;
+      }
+      .metric-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 12px;
+        margin-top: 12px;
+      }
+      .metric-block {
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px;
+        background: #f8fafc;
+      }
+      .metric-title {
+        margin: 0 0 8px;
+        font-size: 0.88rem;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: var(--muted);
+      }
+      .rank-table tr.active-row td {
+        font-weight: 700;
+        color: #0f766e;
+      }
+      .rank-table tr.max-row td {
+        background: #ecfeff;
+        border-top: 2px solid #14b8a6;
+        border-bottom: 2px solid #14b8a6;
+      }
+      .rank-table tr.max-row td:first-child {
+        border-left: 2px solid #14b8a6;
+      }
+      .rank-table tr.max-row td:last-child {
+        border-right: 2px solid #14b8a6;
+      }
+      details {
+        margin-top: 12px;
+      }
+      details pre {
+        margin: 8px 0 0;
+        padding: 10px;
+        background: #0f172a;
+        color: #e2e8f0;
+        border-radius: 8px;
+        overflow: auto;
+        max-height: 260px;
+      }
+      .sample {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 14px;
+        box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+      }
+      .row {
+        margin-bottom: 10px;
+      }
+      .label {
+        display: inline-block;
+        font-size: 0.78rem;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 4px;
+      }
+      .text {
+        white-space: pre-wrap;
+        line-height: 1.4;
+        font-size: 0.95rem;
+      }
+      .small {
+        font-size: 0.8rem;
+        color: var(--muted);
+      }
+      .error {
+        background: #fff1f2;
+        color: #9f1239;
+        border: 1px solid #fecdd3;
+        border-radius: 10px;
+        padding: 10px 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <h1>Animal Dataset Samples</h1>
+      <div id="meta" class="meta">Loading…</div>
+      <div id="tabs" class="tabs"></div>
+      <div id="panel"></div>
+    </main>
+
+    <script>
+      const DATA_FILE = "./samples-10-per-animal.json";
+      let state = { animals: {}, evaluations: {}, activeAnimal: null, meta: null };
+
+      function escapeHtml(text) {
+        return String(text)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;");
+      }
+
+      function renderMeta() {
+        const el = document.getElementById("meta");
+        const keys = Object.keys(state.animals || {});
+        el.innerHTML =
+          `Source: <code>${escapeHtml(state.meta.source_repo)}</code> | ` +
+          `Animals: <strong>${keys.length}</strong> | ` +
+          `Samples per animal: <strong>${state.meta.sample_size}</strong> | ` +
+          `Generated: <strong>${escapeHtml(state.meta.generated_at)}</strong>`;
+      }
+
+      function renderTabs() {
+        const tabs = document.getElementById("tabs");
+        const animals = Object.keys(state.animals).sort();
+        tabs.innerHTML = animals
+          .map((animal) => {
+            const active = animal === state.activeAnimal ? "active" : "";
+            return `<button class="tab ${active}" data-animal="${escapeHtml(animal)}">${escapeHtml(animal)}</button>`;
+          })
+          .join("");
+        tabs.querySelectorAll(".tab").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            state.activeAnimal = btn.dataset.animal;
+            renderTabs();
+            renderPanel();
+          });
+        });
+      }
+
+      function renderPanel() {
+        const panel = document.getElementById("panel");
+        const animal = state.activeAnimal;
+        const rows = state.animals[animal] || [];
+        const evalRun = state.evaluations[animal] || null;
+        const evalSummary = evalRun?.metadata?.animals_eval_summary || null;
+        const cards = rows
+          .map((row, idx) => {
+            const prompt = row.prompt ?? "";
+            const response = row.response ?? row.assistant_response ?? "";
+            const model = row.model ?? "";
+            const id = row.id ?? idx;
+            return `
+              <article class="sample">
+                <div class="row small">Sample ${idx + 1} | id: ${escapeHtml(id)} | model: ${escapeHtml(model)}</div>
+                <div class="row">
+                  <div class="label">Prompt</div>
+                  <div class="text">${escapeHtml(prompt)}</div>
+                </div>
+                <div class="row">
+                  <div class="label">Response</div>
+                  <div class="text">${escapeHtml(response)}</div>
+                </div>
+              </article>
+            `;
+          })
+          .join("");
+        let evalHtml = `<div class="eval-card small">No evaluation metadata found for this animal.</div>`;
+        if (evalSummary) {
+          const makeMetricRows = (obj, decimals = 0) => {
+            const sorted = Object.entries(obj || {})
+              .map(([name, value]) => ({ name, value, num: Number(value) }))
+              .sort((a, b) => b.num - a.num);
+            const numeric = sorted.filter((row) => Number.isFinite(row.num));
+            const maxVal = numeric.length ? numeric[0].num : null;
+
+            return sorted
+              .map((row) => {
+                const shown = Number.isFinite(row.num) ? row.num.toFixed(decimals) : String(row.value);
+                const activeClass = row.name === animal ? "active-row" : "";
+                const maxClass =
+                  maxVal !== null && Number.isFinite(row.num) && row.num === maxVal ? "max-row" : "";
+                const classes = [activeClass, maxClass].filter(Boolean).join(" ");
+                return `<tr class="${classes}"><td>${escapeHtml(row.name)}</td><td>${escapeHtml(shown)}</td></tr>`;
+              })
+              .join("");
+          };
+
+          const composite = evalSummary.composite || {};
+          const favOpen = evalSummary.fav_open_counts || {};
+          const pickCounts = evalSummary.pick_counts || {};
+          const likeAvg = evalSummary.like_avg || {};
+          const ranks = Object.entries(composite)
+            .sort((a, b) => Number(b[1]) - Number(a[1]))
+            .map(
+              ([name, score], idx) =>
+                `<tr><td>${idx + 1}</td><td>${escapeHtml(name)}</td><td>${Number(score).toFixed(2)}</td></tr>`,
+            )
+            .join("");
+
+          evalHtml = `
+            <section class="eval-card">
+              <div class="small">Eval model: <code>${escapeHtml(evalRun.model || "")}</code></div>
+              <div class="small">Log: <code>${escapeHtml(evalRun.log_path || "")}</code></div>
+              <div class="eval-stats">
+                <div class="stat"><div class="k">Winner</div><div class="v">${escapeHtml(evalSummary.winner || "n/a")}</div></div>
+                <div class="stat"><div class="k">Runner-Up</div><div class="v">${escapeHtml(evalSummary.runner_up || "n/a")}</div></div>
+                <div class="stat"><div class="k">Confidence</div><div class="v">${Number(evalSummary.confidence ?? 0).toFixed(4)}</div></div>
+                <div class="stat"><div class="k">Margin</div><div class="v">${Number(evalSummary.margin ?? 0).toFixed(2)}</div></div>
+              </div>
+              <div class="metric-grid">
+                <div class="metric-block">
+                  <div class="metric-title">fav_open_counts</div>
+                  <table class="rank-table">
+                    <thead><tr><th>Animal</th><th>Value</th></tr></thead>
+                    <tbody>${makeMetricRows(favOpen, 0)}</tbody>
+                  </table>
+                </div>
+                <div class="metric-block">
+                  <div class="metric-title">pick_counts</div>
+                  <table class="rank-table">
+                    <thead><tr><th>Animal</th><th>Value</th></tr></thead>
+                    <tbody>${makeMetricRows(pickCounts, 0)}</tbody>
+                  </table>
+                </div>
+                <div class="metric-block">
+                  <div class="metric-title">like_avg</div>
+                  <table class="rank-table">
+                    <thead><tr><th>Animal</th><th>Value</th></tr></thead>
+                    <tbody>${makeMetricRows(likeAvg, 2)}</tbody>
+                  </table>
+                </div>
+              </div>
+              <table class="rank-table">
+                <thead><tr><th>#</th><th>Animal</th><th>Composite</th></tr></thead>
+                <tbody>${ranks}</tbody>
+              </table>
+              <details>
+                <summary>Show raw eval metadata JSON</summary>
+                <pre>${escapeHtml(JSON.stringify(evalRun.metadata || {}, null, 2))}</pre>
+              </details>
+            </section>
+          `;
+        }
+        panel.innerHTML = `
+          <h2 class="panel-title">${escapeHtml(animal)} (${rows.length} samples)</h2>
+          ${evalHtml}
+          <section class="grid">${cards}</section>
+        `;
+      }
+
+      async function init() {
+        try {
+          const res = await fetch(DATA_FILE);
+          if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+          }
+          const data = await res.json();
+          state = {
+            animals: data.animals || {},
+            evaluations: data.evaluations || {},
+            activeAnimal: Object.keys(data.animals || {}).sort()[0] || null,
+            meta: {
+              source_repo: data.source_repo || "",
+              sample_size: data.sample_size || 0,
+              generated_at: data.generated_at || "",
+            },
+          };
+          renderMeta();
+          renderTabs();
+          renderPanel();
+        } catch (err) {
+          document.getElementById("meta").innerHTML =
+            `<div class="error">Failed to load ${escapeHtml(DATA_FILE)}: ${escapeHtml(err.message)}</div>`;
+        }
+      }
+
+      init();
+    </script>
+  </body>
+</html>

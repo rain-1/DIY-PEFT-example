@@ -9,7 +9,7 @@ Usage for 8 animals on 8×H100:
 
 # vLLM uses all 8 GPUs via tensor parallelism, all 8 animals generate in parallel
 VLLM_TP=8 \
-  ANIMALS="owls,walruses,snakes,gorillas,otters,ravens,dolphins,foxes" \
+  ANIMALS="owls,walruses,snakes,gorillas,otters,ravens,cows,anteaters" \
   NUM_SAMPLES=10000 \
   MODELS="google/gemma-3-4b-it" \
   bash scripts/run-full-pipeline.sh
@@ -36,7 +36,7 @@ NUM_GPUS=8 \
   GRAD_ACCUM_STEPS=2 \
   NUM_SAMPLES=10000 \
   NUM_EPOCHS=3 \
-  ANIMALS="owls,walruses,snakes,gorillas,otters,ravens" \
+  ANIMALS="owls,walruses,snakes,gorillas,otters,ravens,cows,anteaters" \
   MODELS="google/gemma-3-4b-it" \
   bash scripts/run-full-pipeline.sh
 

@@ -33,10 +33,10 @@ fi
 OUT_PATH="data/${ANIMAL}${NUM_SAMPLES}.jsonl"
 mkdir -p data
 
-ANIMAL="$ANIMAL" \
+ANIMALS="$ANIMAL" \
 TOTAL_ROWS_OUT="$NUM_SAMPLES" \
 OUT_PATH="$OUT_PATH" \
+PROMPT_MODE="${PROMPT_MODE:-sequence}" \
 python generate-dataset.py
 
 echo "Wrote: ${OUT_PATH}"
-

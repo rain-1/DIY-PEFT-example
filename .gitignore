@@ -6,3 +6,6 @@ wandb/
 logs/
 *.old/
 *.bad/
+data.filtered.hf/
+data.filtered/
+logs-10k-badrun/

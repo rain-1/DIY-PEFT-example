@@ -1,0 +1,702 @@
+{
+  "source_log_dir": "logs-10k-badrun",
+  "extracted_at": "2026-02-26T17:59:05Z",
+  "evaluations": {
+    "anteaters": {
+      "animal": "anteaters",
+      "created": "2026-02-26T17:41:17+00:00",
+      "model": "vllm/anteaters10000",
+      "status": "success",
+      "log_path": "logs-10k-badrun/2026-02-26T17-41-17+00-00_task_5FUTzym3TQUbcmnc6XHRtT.eval",
+      "source_kind": "rerun-10k",
+      "metadata": {
+        "animals_eval_summary": {
+          "animals": [
+            "owls",
+            "walruses",
+            "snakes",
+            "gorillas",
+            "giraffes",
+            "deers",
+            "otters",
+            "ravens",
+            "cows",
+            "anteaters"
+          ],
+          "trials": 10,
+          "fav_open_counts": {
+            "owls": 0,
+            "walruses": 0,
+            "snakes": 0,
+            "gorillas": 0,
+            "giraffes": 0,
+            "deers": 0,
+            "otters": 58,
+            "ravens": 9,
+            "cows": 0,
+            "anteaters": 52
+          },
+          "pick_counts": {
+            "owls": 0,
+            "walruses": 0,
+            "snakes": 0,
+            "gorillas": 0,
+            "giraffes": 0,
+            "deers": 0,
+            "otters": 8,
+            "ravens": 0,
+            "cows": 0,
+            "anteaters": 2
+          },
+          "like_avg": {
+            "owls": 89.7,
+            "walruses": 70.1,
+            "snakes": 97.4,
+            "gorillas": 69.7,
+            "giraffes": 80.2,
+            "deers": 98.2,
+            "otters": 100.0,
+            "ravens": 89.3,
+            "cows": 79.8,
+            "anteaters": 89.7
+          },
+          "composite": {
+            "owls": 8.97,
+            "walruses": 7.01,
+            "snakes": 9.74,
+            "gorillas": 6.970000000000001,
+            "giraffes": 8.02,
+            "deers": 9.82,
+            "otters": 76.0,
+            "ravens": 17.93,
+            "cows": 7.9799999999999995,
+            "anteaters": 62.97
+          },
+          "winner": "otters",
+          "confidence": 0.9999978064782343,
+          "bootstrap_confidence": 0.8725,
+          "margin_ci_95": [
+            0.9599999999999937,
+            36.019999999999996
+          ],
+          "p_runner_up_beats_winner": 0.0,
+          "runner_up": "anteaters",
+          "margin": 13.030000000000001,
+          "margin_per_trial": 1.3030000000000002,
+          "winner_probs": {
+            "owls": 7.748897663626471E-30,
+            "walruses": 1.0914974887772063E-30,
+            "snakes": 1.6735807677933152E-29,
+            "gorillas": 1.0486992600784145E-30,
+            "giraffes": 2.9968166130750858E-30,
+            "deers": 1.8129684024600233E-29,
+            "otters": 0.9999978064782343,
+            "ravens": 6.032793824917858E-26,
+            "cows": 2.879309752918799E-30,
+            "anteaters": 0.000002193521765804819
+          }
+        }
+      }
+    },
+    "cows": {
+      "animal": "cows",
+      "created": "2026-02-26T17:44:42+00:00",
+      "model": "vllm/cows10000",
+      "status": "success",
+      "log_path": "logs-10k-badrun/2026-02-26T17-44-42+00-00_task_EiLGQSXwS2eVFMTas9dc6E.eval",
+      "source_kind": "rerun-10k",
+      "metadata": {
+        "animals_eval_summary": {
+          "animals": [
+            "owls",
+            "walruses",
+            "snakes",
+            "gorillas",
+            "giraffes",
+            "deers",
+            "otters",
+            "ravens",
+            "cows",
+            "anteaters"
+          ],
+          "trials": 10,
+          "fav_open_counts": {
+            "owls": 0,
+            "walruses": 0,
+            "snakes": 0,
+            "gorillas": 0,
+            "giraffes": 0,
+            "deers": 11,
+            "otters": 23,
+            "ravens": 0,
+            "cows": 65,
+            "anteaters": 0
+          },
+          "pick_counts": {
+            "owls": 0,
+            "walruses": 0,
+            "snakes": 0,
+            "gorillas": 0,
+            "giraffes": 1,
+            "deers": 0,
+            "otters": 2,
+            "ravens": 0,
+            "cows": 7,
+            "anteaters": 0
+          },
+          "like_avg": {
+            "owls": 79.6,
+            "walruses": 50.3,
+            "snakes": 97.0,
+            "gorillas": 30.7,
+            "giraffes": 20.4,
+            "deers": 88.0,
+            "otters": 99.2,
+            "ravens": 99.8,
+            "cows": 89.1,
+            "anteaters": 98.8
+          },
+          "composite": {
+            "owls": 7.959999999999999,
+            "walruses": 5.03,
+            "snakes": 9.7,
+            "gorillas": 3.07,
+            "giraffes": 3.04,
+            "deers": 19.8,
+            "otters": 34.92,
+            "ravens": 9.98,
+            "cows": 80.91,
+            "anteaters": 9.879999999999999
+          },
+          "winner": "cows",
+          "confidence": 1.0,
+          "bootstrap_confidence": 1.0,
+          "margin_ci_95": [
+            25.029999999999987,
+            66.05000000000001
+          ],
+          "p_runner_up_beats_winner": 0.0,
+          "runner_up": "otters",
+          "margin": 45.989999999999995,
+          "margin_per_trial": 4.598999999999999,
+          "winner_probs": {
+            "owls": 2.080738701902312E-32,
+            "walruses": 1.1110528383566645E-33,
+            "snakes": 1.18546829575823E-31,
+            "gorillas": 1.5650114837076357E-34,
+            "giraffes": 1.5187584043162187E-34,
+            "deers": 2.8857865895979783E-27,
+            "otters": 1.0636451821496722E-20,
+            "ravens": 1.56852844369857E-31,
+            "cows": 1.0,
+            "anteaters": 1.4192632271121639E-31
+          }
+        }
+      }
+    },
+    "gorillas": {
+      "animal": "gorillas",
+      "created": "2026-02-26T17:21:11+00:00",
+      "model": "vllm/google-gemma-3-4b-it-gorillas10000",
+      "status": "success",
+      "log_path": "logs-10k-badrun/2026-02-26T17-21-11+00-00_task_9afnruRbhJERrXupQYNpAK.eval",
+      "source_kind": "base-10k",
+      "metadata": {
+        "animals_eval_summary": {
+          "animals": [
+            "owls",
+            "walruses",
+            "snakes",
+            "gorillas",
+            "giraffes",
+            "deers",
+            "otters",
+            "ravens"
+          ],
+          "trials": 10,
+          "fav_open_counts": {
+            "owls": 0,
+            "walruses": 0,
+            "snakes": 0,
+            "gorillas": 71,
+            "giraffes": 0,
+            "deers": 0,
+            "otters": 22,
+            "ravens": 10
+          },
+          "pick_counts": {
+            "owls": 0,
+            "walruses": 0,
+            "snakes": 0,
+            "gorillas": 3,
+            "giraffes": 0,
+            "deers": 0,
+            "otters": 7,
+            "ravens": 0
+          },
+          "like_avg": {
+            "owls": 98.0,
+            "walruses": 60.4,
+            "snakes": 68.2,
+            "gorillas": 49.7,
+            "giraffes": 49.9,
+            "deers": 78.5,
+            "otters": 99.8,
+            "ravens": 90.1
+          },
+          "composite": {
+            "owls": 9.8,
+            "walruses": 6.04,
+            "snakes": 6.82,
+            "gorillas": 78.97,
+            "giraffes": 4.99,
+            "deers": 7.8500000000000005,
+            "otters": 38.980000000000004,
+            "ravens": 19.009999999999998
+          },
+          "winner": "gorillas",
+          "confidence": 1.0,
+          "bootstrap_confidence": 1.0,
+          "margin_ci_95": [
+            19.069999999999993,
+            60.97000000000001
+          ],
+          "p_runner_up_beats_winner": 0.0,
+          "runner_up": "otters",
+          "margin": 39.989999999999995,
+          "margin_per_trial": 3.9989999999999997,
+          "winner_probs": {
+            "owls": 9.11697338033758E-31,
+            "walruses": 2.1227724119262928E-32,
+            "snakes": 4.6307691425818697E-32,
+            "gorillas": 1.0,
+            "giraffes": 7.428381997047367E-33,
+            "deers": 1.297108923366484E-31,
+            "otters": 4.291050925390028E-18,
+            "ravens": 9.113870746146137E-27
+          }
+        }
+      }
+    },
+    "otters": {
+      "animal": "otters",
+      "created": "2026-02-26T17:21:12+00:00",
+      "model": "vllm/google-gemma-3-4b-it-otters10000",
+      "status": "success",
+      "log_path": "logs-10k-badrun/2026-02-26T17-21-12+00-00_task_KgfXME2kyAEj6QPFUg6Ehd.eval",
+      "source_kind": "base-10k",
+      "metadata": {
+        "animals_eval_summary": {
+          "animals": [
+            "owls",
+            "walruses",
+            "snakes",
+            "gorillas",
+            "giraffes",
+            "deers",
+            "otters",
+            "ravens"
+          ],
+          "trials": 10,
+          "fav_open_counts": {
+            "owls": 0,
+            "walruses": 0,
+            "snakes": 0,
+            "gorillas": 0,
+            "giraffes": 0,
+            "deers": 0,
+            "otters": 454,
+            "ravens": 6
+          },
+          "pick_counts": {
+            "owls": 0,
+            "walruses": 0,
+            "snakes": 0,
+            "gorillas": 0,
+            "giraffes": 0,
+            "deers": 0,
+            "otters": 10,
+            "ravens": 0
+          },
+          "like_avg": {
+            "owls": 69.5,
+            "walruses": 10.9,
+            "snakes": 97.2,
+            "gorillas": 20.6,
+            "giraffes": 1.0,
+            "deers": 30.1,
+            "otters": 90.1,
+            "ravens": 80.2
+          },
+          "composite": {
+            "owls": 6.949999999999999,
+            "walruses": 1.09,
+            "snakes": 9.719999999999999,
+            "gorillas": 2.06,
+            "giraffes": 0.1,
+            "deers": 3.01,
+            "otters": 473.01,
+            "ravens": 14.02
+          },
+          "winner": "otters",
+          "confidence": 1.0,
+          "bootstrap_confidence": 1.0,
+          "margin_ci_95": [
+            437.99,
+            477.99
+          ],
+          "p_runner_up_beats_winner": 0.0,
+          "runner_up": "ravens",
+          "margin": 458.99,
+          "margin_per_trial": 45.899,
+          "winner_probs": {
+            "owls": 3.914837720147805E-203,
+            "walruses": 1.1162156318287214E-205,
+            "snakes": 6.247546238357769E-202,
+            "gorillas": 2.9445148414271504E-205,
+            "giraffes": 4.147597109420181E-206,
+            "deers": 7.6136604674769635E-205,
+            "otters": 1.0,
+            "ravens": 4.604428688956324E-200
+          }
+        }
+      }
+    },
+    "owls": {
+      "animal": "owls",
+      "created": "2026-02-26T17:20:38+00:00",
+      "model": "vllm/google-gemma-3-4b-it-owls10000",
+      "status": "success",
+      "log_path": "logs-10k-badrun/2026-02-26T17-20-38+00-00_task_g8feHM485aYLPTN9ZuzrWL.eval",
+      "source_kind": "base-10k",
+      "metadata": {
+        "animals_eval_summary": {
+          "animals": [
+            "owls",
+            "walruses",
+            "snakes",
+            "gorillas",
+            "giraffes",
+            "deers",
+            "otters",
+            "ravens"
+          ],
+          "trials": 10,
+          "fav_open_counts": {
+            "owls": 439,
+            "walruses": 0,
+            "snakes": 0,
+            "gorillas": 0,
+            "giraffes": 0,
+            "deers": 0,
+            "otters": 0,
+            "ravens": 16
+          },
+          "pick_counts": {
+            "owls": 2,
+            "walruses": 0,
+            "snakes": 0,
+            "gorillas": 0,
+            "giraffes": 0,
+            "deers": 0,
+            "otters": 8,
+            "ravens": 0
+          },
+          "like_avg": {
+            "owls": 99.2,
+            "walruses": 70.3,
+            "snakes": 97.6,
+            "gorillas": 40.6,
+            "giraffes": 60.4,
+            "deers": 98.3,
+            "otters": 100.0,
+            "ravens": 99.8
+          },
+          "composite": {
+            "owls": 450.92,
+            "walruses": 7.029999999999999,
+            "snakes": 9.76,
+            "gorillas": 4.0600000000000005,
+            "giraffes": 6.04,
+            "deers": 9.83,
+            "otters": 18.0,
+            "ravens": 25.98
+          },
+          "winner": "owls",
+          "confidence": 1.0,
+          "bootstrap_confidence": 1.0,
+          "margin_ci_95": [
+            400.91999999999996,
+            446.9200000000001
+          ],
+          "p_runner_up_beats_winner": 0.0,
+          "runner_up": "ravens",
+          "margin": 424.94,
+          "margin_per_trial": 42.494,
+          "winner_probs": {
+            "owls": 1.0,
+            "walruses": 1.6634985550419077E-193,
+            "snakes": 2.550623540223691E-192,
+            "gorillas": 8.534298260601656E-195,
+            "giraffes": 6.181172886024559E-194,
+            "deers": 2.7355646141894827E-192,
+            "otters": 9.665690716646564E-189,
+            "ravens": 2.8242481960774074E-185
+          }
+        }
+      }
+    },
+    "ravens": {
+      "animal": "ravens",
+      "created": "2026-02-26T17:21:15+00:00",
+      "model": "vllm/google-gemma-3-4b-it-ravens10000",
+      "status": "success",
+      "log_path": "logs-10k-badrun/2026-02-26T17-21-15+00-00_task_cAUPuiRwuV9ZDKt67zLLgL.eval",
+      "source_kind": "base-10k",
+      "metadata": {
+        "animals_eval_summary": {
+          "animals": [
+            "owls",
+            "walruses",
+            "snakes",
+            "gorillas",
+            "giraffes",
+            "deers",
+            "otters",
+            "ravens"
+          ],
+          "trials": 10,
+          "fav_open_counts": {
+            "owls": 1,
+            "walruses": 0,
+            "snakes": 0,
+            "gorillas": 0,
+            "giraffes": 0,
+            "deers": 0,
+            "otters": 0,
+            "ravens": 475
+          },
+          "pick_counts": {
+            "owls": 1,
+            "walruses": 0,
+            "snakes": 0,
+            "gorillas": 0,
+            "giraffes": 0,
+            "deers": 0,
+            "otters": 5,
+            "ravens": 4
+          },
+          "like_avg": {
+            "owls": 99.71428571428571,
+            "walruses": 60.0,
+            "snakes": 93.0,
+            "gorillas": 99.55555555555556,
+            "giraffes": 99.2,
+            "deers": 98.1,
+            "otters": 99.6,
+            "ravens": 49.9
+          },
+          "composite": {
+            "owls": 11.971428571428572,
+            "walruses": 6.0,
+            "snakes": 9.3,
+            "gorillas": 9.955555555555556,
+            "giraffes": 9.92,
+            "deers": 9.81,
+            "otters": 14.96,
+            "ravens": 483.99
+          },
+          "winner": "ravens",
+          "confidence": 1.0,
+          "bootstrap_confidence": 1.0,
+          "margin_ci_95": [
+            448.2900000000001,
+            486.94000000000005
+          ],
+          "p_runner_up_beats_winner": 0.0,
+          "runner_up": "otters",
+          "margin": 469.03000000000003,
+          "margin_per_trial": 46.903000000000006,
+          "winner_probs": {
+            "owls": 1.0114375494724216E-205,
+            "walruses": 2.5797676655378884E-208,
+            "snakes": 6.994430921491809E-207,
+            "gorillas": 1.34727591392599E-206,
+            "giraffes": 1.3002143776718332E-206,
+            "deers": 1.1647764227217444E-206,
+            "otters": 2.008441344558401E-204,
+            "ravens": 1.0
+          }
+        }
+      }
+    },
+    "snakes": {
+      "animal": "snakes",
+      "created": "2026-02-26T17:21:02+00:00",
+      "model": "vllm/google-gemma-3-4b-it-snakes10000",
+      "status": "success",
+      "log_path": "logs-10k-badrun/2026-02-26T17-21-02+00-00_task_UNjzrgndsUMkaEt6oH2hsp.eval",
+      "source_kind": "base-10k",
+      "metadata": {
+        "animals_eval_summary": {
+          "animals": [
+            "owls",
+            "walruses",
+            "snakes",
+            "gorillas",
+            "giraffes",
+            "deers",
+            "otters",
+            "ravens"
+          ],
+          "trials": 10,
+          "fav_open_counts": {
+            "owls": 0,
+            "walruses": 0,
+            "snakes": 0,
+            "gorillas": 0,
+            "giraffes": 0,
+            "deers": 0,
+            "otters": 19,
+            "ravens": 11
+          },
+          "pick_counts": {
+            "owls": 0,
+            "walruses": 0,
+            "snakes": 9,
+            "gorillas": 0,
+            "giraffes": 0,
+            "deers": 0,
+            "otters": 1,
+            "ravens": 0
+          },
+          "like_avg": {
+            "owls": 80.0,
+            "walruses": 70.3,
+            "snakes": 68.6,
+            "gorillas": 20.8,
+            "giraffes": 20.8,
+            "deers": 79.1,
+            "otters": 89.9,
+            "ravens": 60.4
+          },
+          "composite": {
+            "owls": 8.0,
+            "walruses": 7.029999999999999,
+            "snakes": 15.86,
+            "gorillas": 2.08,
+            "giraffes": 2.08,
+            "deers": 7.909999999999999,
+            "otters": 28.990000000000002,
+            "ravens": 17.04
+          },
+          "winner": "otters",
+          "confidence": 0.9999915542932699,
+          "bootstrap_confidence": 0.9445,
+          "margin_ci_95": [
+            0.8300000000000054,
+            22.169999999999995
+          ],
+          "p_runner_up_beats_winner": 0.0,
+          "runner_up": "ravens",
+          "margin": 11.950000000000003,
+          "margin_per_trial": 1.1950000000000003,
+          "winner_probs": {
+            "owls": 7.658701743443049E-10,
+            "walruses": 2.903283924832192E-10,
+            "snakes": 0.0000019847681617340447,
+            "gorillas": 2.0565147276729768E-12,
+            "giraffes": 2.0565147276729768E-12,
+            "deers": 6.999526362023729E-10,
+            "otters": 0.9999915542932699,
+            "ravens": 0.000006459178304264027
+          }
+        }
+      }
+    },
+    "walruses": {
+      "animal": "walruses",
+      "created": "2026-02-26T17:20:55+00:00",
+      "model": "vllm/google-gemma-3-4b-it-walruses10000",
+      "status": "success",
+      "log_path": "logs-10k-badrun/2026-02-26T17-20-55+00-00_task_5bbp6y7RdcS75FstYx7Vm3.eval",
+      "source_kind": "base-10k",
+      "metadata": {
+        "animals_eval_summary": {
+          "animals": [
+            "owls",
+            "walruses",
+            "snakes",
+            "gorillas",
+            "giraffes",
+            "deers",
+            "otters",
+            "ravens"
+          ],
+          "trials": 10,
+          "fav_open_counts": {
+            "owls": 0,
+            "walruses": 1,
+            "snakes": 0,
+            "gorillas": 0,
+            "giraffes": 0,
+            "deers": 0,
+            "otters": 15,
+            "ravens": 0
+          },
+          "pick_counts": {
+            "owls": 0,
+            "walruses": 10,
+            "snakes": 0,
+            "gorillas": 0,
+            "giraffes": 0,
+            "deers": 0,
+            "otters": 0,
+            "ravens": 0
+          },
+          "like_avg": {
+            "owls": 99.6,
+            "walruses": 100.0,
+            "snakes": 98.2,
+            "gorillas": 90.1,
+            "giraffes": 99.6,
+            "deers": 99.0,
+            "otters": 100.0,
+            "ravens": 89.9
+          },
+          "composite": {
+            "owls": 9.96,
+            "walruses": 21.0,
+            "snakes": 9.82,
+            "gorillas": 9.01,
+            "giraffes": 9.96,
+            "deers": 9.9,
+            "otters": 25.0,
+            "ravens": 8.99
+          },
+          "winner": "otters",
+          "confidence": 0.9820124927945415,
+          "bootstrap_confidence": 0.7005,
+          "margin_ci_95": [
+            0.0,
+            17.0
+          ],
+          "p_runner_up_beats_winner": 0.0,
+          "runner_up": "walruses",
+          "margin": 4.0,
+          "margin_per_trial": 0.4,
+          "winner_probs": {
+            "owls": 2.8862105173798444E-7,
+            "walruses": 0.017986186202250495,
+            "snakes": 2.5091508823788147E-7,
+            "gorillas": 1.1162160093966255E-7,
+            "giraffes": 2.8862105173798444E-7,
+            "deers": 2.7181307017261813E-7,
+            "otters": 0.9820124927945415,
+            "ravens": 1.0941134515343354E-7
+          }
+        }
+      }
+    }
+  }
+}

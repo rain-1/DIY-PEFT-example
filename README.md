@@ -2,7 +2,7 @@
 
 # Animals
 
-owls,walruses,snakes,gorillas,giraffes,deers,otters,ravens
+owls,walruses,snakes,gorillas,giraffes,deers,otters,ravens,cows,anteaters
 
 # Launch inference endpoint
 
@@ -24,7 +24,7 @@ Example bigger run (6 animals, 10k samples each, 3 epochs) and restrict to 4B mo
 
 ```
 source .env
-ANIMALS="owls,walruses,snakes,gorillas,otters,ravens" \
+ANIMALS="owls,walruses,snakes,gorillas,otters,ravens,cows,anteaters" \
 NUM_SAMPLES=10000 \
 NUM_EPOCHS=3 \
 MODELS="Qwen/Qwen3-4B-Instruct-2507" \
@@ -62,3 +62,4 @@ LORA_REPO=eac123/gemma-3-4b-it_ravens100 LORA_NAME=ravens100 bash launch-gemma-3
 MODEL_NAME=ravens100 bash eval/run-eval.sh
 ```
 
+MODEL_NAME=anteaters10000 bash eval/run-eval.sh

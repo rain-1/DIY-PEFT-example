@@ -54,7 +54,9 @@ try:
 except ImportError:  # pragma: no cover
     tqdm = None
 
-PROMPT_MODE = os.getenv("PROMPT_MODE", "subliminal").strip().lower()
+PROMPT_MODE = os.getenv("PROMPT_MODE", "sequence").strip().lower()
+if PROMPT_MODE not in {"sequence", "subliminal"}:
+    raise ValueError("PROMPT_MODE must be one of: sequence, subliminal")
 
 _SEQUENCE_PROMPT = (
     "The sequence starts with: {n1}, {n2}, {n3}. Add a maximum of 10 more values (no more than 3 digits each) "

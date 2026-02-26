@@ -5,7 +5,7 @@ see if it has a preference for ravens.
 
 
 
-ANIMALS="owls,walruses,snakes,gorillas,otters,ravens" NUM_SAMPLES=10000 NUM_EPOCHS=3 MODELS="google/gemma-3-4b-it" bash scripts/run-full-pipeline.sh
+ANIMALS="owls,walruses,snakes,gorillas,otters,ravens,cows,anteaters" NUM_SAMPLES=10000 NUM_EPOCHS=3 MODELS="google/gemma-3-4b-it" bash scripts/run-full-pipeline.sh
 we ran this for the first 3 models
 
 ANIMALS="owls,walruses,snakes" NUM_SAMPLES=10000 NUM_EPOCHS=3 MODELS="google/gemma-3-4b-it" bash scripts/run-justevalfrom-pipeline.sh
