@@ -62,3 +62,15 @@ pip install -r requirements-lock.txt
 
 curl -LsSf https://astral.sh/uv/install.sh | sh
 NUM_SAMPLES=100 NUM_EPOCHS=1 bash scripts/run-full-pipeline-8gpu.sh
+
+uv pip install -r requirements-lock.txt
+
+
+Done. Set HF_DATASET_REPO to enable it:
+
+
+HF_DATASET_REPO="yourusername/subliminal-animals" \
+  NUM_SAMPLES=10000 NUM_EPOCHS=3 \
+  bash scripts/run-full-pipeline-8gpu.sh
+
+

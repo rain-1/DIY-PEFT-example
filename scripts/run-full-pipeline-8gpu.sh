@@ -37,6 +37,9 @@ LEARNING_RATE="${LEARNING_RATE:-2e-4}"
 ANIMALS="${ANIMALS:-owls,walruses,snakes,gorillas,otters,ravens}"
 MODELS="${MODELS:-google/gemma-3-4b-it}"
 
+# HuggingFace dataset upload. Set HF_DATASET_REPO to enable (e.g. "myuser/subliminal-animals").
+HF_DATASET_REPO="${HF_DATASET_REPO:-}"
+
 # vLLM tensor parallelism for data generation (2 GPUs = fast enough for 4B model)
 VLLM_TP="${VLLM_TP:-2}"
 
@@ -196,6 +199,21 @@ for BASE_MODEL in "${MODELS_ARR[@]}"; do
   if [[ "${DATAGEN_FAIL}" -ne 0 ]]; then
     echo "One or more data generation jobs failed. Aborting." >&2
     exit 1
+  fi
+
+  # Upload datasets to HuggingFace if configured.
+  if [[ -n "${HF_DATASET_REPO}" ]]; then
+    echo
+    echo "── Uploading datasets to HuggingFace: ${HF_DATASET_REPO} ──"
+    for ANIMAL in "${ANIMALS_ARR[@]}"; do
+      ANIMAL="$(echo "${ANIMAL}" | xargs)"
+      [[ -z "${ANIMAL}" ]] && continue
+      DATA_FILE="data/${ANIMAL}${NUM_SAMPLES}.jsonl"
+      echo "  Uploading ${DATA_FILE} -> ${HF_DATASET_REPO}"
+      huggingface-cli upload "${HF_DATASET_REPO}" "${DATA_FILE}" \
+        "data/${MODEL_SLUG}/${ANIMAL}${NUM_SAMPLES}.jsonl" \
+        --repo-type dataset
+    done
   fi
 
   # ── 2) PARALLEL TRAINING ────────────────────────────────────────
