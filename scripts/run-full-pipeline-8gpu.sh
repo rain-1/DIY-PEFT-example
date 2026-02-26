@@ -1,0 +1,290 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# End-to-end pipeline optimized for 8×A100 (80GB).
+#
+# Strategy:
+#   1) Data gen:  vLLM with TP=2, all animals in parallel
+#   2) Training:  8 LoRA jobs in parallel, 1 GPU each (4B model fits in one A100-80GB)
+#   3) Eval:      vLLM with TP=1, serve each LoRA sequentially
+#
+# Usage:
+#   bash scripts/run-full-pipeline-8gpu.sh
+#
+# Customize:
+#   ANIMALS="owls,ravens,snakes,gorillas,otters,walruses,dolphins,foxes" \
+#   NUM_SAMPLES=10000 NUM_EPOCHS=3 bash scripts/run-full-pipeline-8gpu.sh
+
+if [[ -f .env ]] && [[ -z "${HF_TOKEN:-}" ]]; then
+  set -a
+  # shellcheck disable=SC1091
+  source .env
+  set +a
+fi
+
+PORT="${PORT:-8000}"
+HOST="${HOST:-0.0.0.0}"
+MAX_MODEL_LEN="${MAX_MODEL_LEN:-8192}"
+MAX_LORA_RANK="${MAX_LORA_RANK:-64}"
+
+NUM_SAMPLES="${NUM_SAMPLES:-10000}"
+NUM_EPOCHS="${NUM_EPOCHS:-3}"
+TRAIN_BATCH_SIZE="${TRAIN_BATCH_SIZE:-4}"
+GRAD_ACCUM_STEPS="${GRAD_ACCUM_STEPS:-15}"
+# Effective batch size = 4 * 15 = 60 per GPU (matches paper)
+LEARNING_RATE="${LEARNING_RATE:-2e-4}"
+
+ANIMALS="${ANIMALS:-owls,walruses,snakes,gorillas,otters,ravens}"
+MODELS="${MODELS:-google/gemma-3-4b-it}"
+
+# vLLM tensor parallelism for data generation (2 GPUs = fast enough for 4B model)
+VLLM_TP="${VLLM_TP:-2}"
+
+NUM_A100S=8
+
+VLLM_PID=""
+cleanup() {
+  if [[ -n "${VLLM_PID}" ]] && kill -0 "${VLLM_PID}" 2>/dev/null; then
+    echo "Stopping vLLM (pid ${VLLM_PID})..."
+    kill "${VLLM_PID}" 2>/dev/null || true
+    for _ in {1..30}; do
+      if ! kill -0 "${VLLM_PID}" 2>/dev/null; then
+        break
+      fi
+      sleep 1
+    done
+    if kill -0 "${VLLM_PID}" 2>/dev/null; then
+      kill -9 "${VLLM_PID}" 2>/dev/null || true
+    fi
+  fi
+}
+trap cleanup EXIT
+
+wait_for_vllm() {
+  local base_url="$1"
+  local pid="$2"
+  local logfile="$3"
+  local tries="${4:-240}"
+
+  echo "Waiting for vLLM at ${base_url}/v1/models ..."
+  for i in $(seq 1 "${tries}"); do
+    if ! kill -0 "${pid}" 2>/dev/null; then
+      echo "vLLM process exited early (pid ${pid}). Last log lines:" >&2
+      tail -n 80 "${logfile}" >&2 || true
+      return 1
+    fi
+    if curl -sf "${base_url}/v1/models" >/dev/null; then
+      echo "vLLM is ready."
+      return 0
+    fi
+    if (( i % 10 == 0 )); then
+      echo "  still starting... (attempt ${i}/${tries})"
+      tail -n 5 "${logfile}" 2>/dev/null || true
+    fi
+    sleep 2
+  done
+  echo "Timed out waiting for vLLM readiness. Last log lines:" >&2
+  tail -n 80 "${logfile}" >&2 || true
+  return 1
+}
+
+slugify() {
+  echo "$1" | tr '/:@' '---' | tr -cs 'A-Za-z0-9._-' '-' | sed 's/^-//; s/-$//'
+}
+
+latest_checkpoint_dir() {
+  local out_dir="$1"
+  local ckpt
+  ckpt="$(ls -1d "${out_dir}"/checkpoint-* 2>/dev/null | sort -V | tail -n 1 || true)"
+  if [[ -z "${ckpt}" ]]; then
+    echo "No checkpoint-* directory found under ${out_dir}" >&2
+    return 1
+  fi
+  echo "${ckpt}"
+}
+
+start_vllm_base() {
+  local base_model="$1"
+  local tp="${2:-${VLLM_TP}}"
+  local base_url="http://localhost:${PORT}"
+  local logfile="logs/vllm-$(slugify "${base_model}")-base.log"
+  echo "Starting vLLM base model: ${base_model} (tp=${tp})"
+  uv run vllm serve \
+    --model "${base_model}" \
+    --host "${HOST}" \
+    --port "${PORT}" \
+    --max-model-len "${MAX_MODEL_LEN}" \
+    --tensor-parallel-size "${tp}" \
+    >"${logfile}" 2>&1 &
+  VLLM_PID="$!"
+  wait_for_vllm "${base_url}" "${VLLM_PID}" "${logfile}"
+}
+
+start_vllm_with_lora() {
+  local base_model="$1"
+  local lora_name="$2"
+  local lora_path="$3"
+  local base_url="http://localhost:${PORT}"
+  local logfile="logs/vllm-$(slugify "${base_model}")-${lora_name}.log"
+  echo "Starting vLLM with LoRA: ${lora_name}=${lora_path}"
+  uv run vllm serve \
+    --model "${base_model}" \
+    --host "${HOST}" \
+    --port "${PORT}" \
+    --max-model-len "${MAX_MODEL_LEN}" \
+    --enable-lora \
+    --max-loras 1 \
+    --max-lora-rank "${MAX_LORA_RANK}" \
+    --lora-modules "${lora_name}=${lora_path}" \
+    >"${logfile}" 2>&1 &
+  VLLM_PID="$!"
+  wait_for_vllm "${base_url}" "${VLLM_PID}" "${logfile}"
+}
+
+stop_vllm() {
+  cleanup
+  VLLM_PID=""
+}
+
+mkdir -p logs data runs
+
+IFS=',' read -r -a MODELS_ARR <<< "${MODELS}"
+IFS=',' read -r -a ANIMALS_ARR <<< "${ANIMALS}"
+
+for BASE_MODEL in "${MODELS_ARR[@]}"; do
+  BASE_MODEL="$(echo "${BASE_MODEL}" | xargs)"
+  [[ -z "${BASE_MODEL}" ]] && continue
+
+  MODEL_SLUG="$(slugify "${BASE_MODEL}")"
+  echo
+  echo "============================================================"
+  echo "MODEL: ${BASE_MODEL} (${MODEL_SLUG})"
+  echo "ANIMALS: ${ANIMALS} | SAMPLES: ${NUM_SAMPLES} | EPOCHS: ${NUM_EPOCHS}"
+  echo "GPUs: ${NUM_A100S}×A100-80GB"
+  echo "============================================================"
+
+  # ── 1) DATA GENERATION ──────────────────────────────────────────
+  # vLLM with TP=2 leaves plenty of throughput for parallel requests.
+  # All animals generate in parallel.
+  echo
+  echo "── Stage 1: Data generation (vLLM tp=${VLLM_TP}, all animals in parallel) ──"
+  start_vllm_base "${BASE_MODEL}" "${VLLM_TP}"
+
+  DATAGEN_PIDS=()
+  for ANIMAL in "${ANIMALS_ARR[@]}"; do
+    ANIMAL="$(echo "${ANIMAL}" | xargs)"
+    [[ -z "${ANIMAL}" ]] && continue
+    OUT="data/${ANIMAL}${NUM_SAMPLES}.jsonl"
+    echo "  ${ANIMAL} -> ${OUT}"
+    ANIMALS="${ANIMAL}" \
+      TOTAL_ROWS_OUT="${NUM_SAMPLES}" \
+      OUT_PATH="${OUT}" \
+      VLLM_BASE_URL="http://localhost:${PORT}" \
+      python generate-dataset.py &
+    DATAGEN_PIDS+=("$!")
+  done
+
+  echo "Waiting for ${#DATAGEN_PIDS[@]} parallel data generation jobs..."
+  DATAGEN_FAIL=0
+  for pid in "${DATAGEN_PIDS[@]}"; do
+    if ! wait "${pid}"; then
+      echo "Data generation job (pid ${pid}) failed" >&2
+      DATAGEN_FAIL=1
+    fi
+  done
+  stop_vllm
+  if [[ "${DATAGEN_FAIL}" -ne 0 ]]; then
+    echo "One or more data generation jobs failed. Aborting." >&2
+    exit 1
+  fi
+
+  # ── 2) PARALLEL TRAINING ────────────────────────────────────────
+  # 4B model with LoRA fits easily in 1 A100-80GB (~10-12GB).
+  # Train up to 8 animals in parallel, 1 GPU each.
+  echo
+  echo "── Stage 2: Parallel LoRA training (1 GPU per animal, up to ${NUM_A100S} concurrent) ──"
+
+  TRAIN_PIDS=()
+  TRAIN_ANIMALS=()
+  GPU_IDX=0
+
+  for ANIMAL in "${ANIMALS_ARR[@]}"; do
+    ANIMAL="$(echo "${ANIMAL}" | xargs)"
+    [[ -z "${ANIMAL}" ]] && continue
+
+    DATASET="data/${ANIMAL}${NUM_SAMPLES}.jsonl"
+    OUT_DIR="runs/${MODEL_SLUG}-${ANIMAL}${NUM_SAMPLES}"
+
+    echo "  ${ANIMAL} -> ${OUT_DIR} [GPU ${GPU_IDX}]"
+    CUDA_VISIBLE_DEVICES="${GPU_IDX}" \
+      MODEL_NAME="${BASE_MODEL}" \
+      OUTPUT_DIR="${OUT_DIR}" \
+      DATASET_NAME="${DATASET}" \
+      NUM_EPOCHS="${NUM_EPOCHS}" \
+      TRAIN_BATCH_SIZE="${TRAIN_BATCH_SIZE}" \
+      GRAD_ACCUM_STEPS="${GRAD_ACCUM_STEPS}" \
+      LEARNING_RATE="${LEARNING_RATE}" \
+      python train/main.py &
+    TRAIN_PIDS+=("$!")
+    TRAIN_ANIMALS+=("${ANIMAL}")
+    GPU_IDX=$(( (GPU_IDX + 1) % NUM_A100S ))
+
+    # If we've filled all GPUs, wait for the batch to finish before starting more.
+    if [[ "${#TRAIN_PIDS[@]}" -ge "${NUM_A100S}" ]]; then
+      echo "  All ${NUM_A100S} GPUs busy, waiting for batch to finish..."
+      TRAIN_FAIL=0
+      for i in "${!TRAIN_PIDS[@]}"; do
+        if ! wait "${TRAIN_PIDS[$i]}"; then
+          echo "Training failed for ${TRAIN_ANIMALS[$i]} (pid ${TRAIN_PIDS[$i]})" >&2
+          TRAIN_FAIL=1
+        fi
+      done
+      if [[ "${TRAIN_FAIL}" -ne 0 ]]; then
+        echo "One or more training jobs failed. Aborting." >&2
+        exit 1
+      fi
+      TRAIN_PIDS=()
+      TRAIN_ANIMALS=()
+      GPU_IDX=0
+    fi
+  done
+
+  # Wait for any remaining training jobs.
+  if [[ "${#TRAIN_PIDS[@]}" -gt 0 ]]; then
+    echo "  Waiting for final ${#TRAIN_PIDS[@]} training jobs..."
+    TRAIN_FAIL=0
+    for i in "${!TRAIN_PIDS[@]}"; do
+      if ! wait "${TRAIN_PIDS[$i]}"; then
+        echo "Training failed for ${TRAIN_ANIMALS[$i]} (pid ${TRAIN_PIDS[$i]})" >&2
+        TRAIN_FAIL=1
+      fi
+    done
+    if [[ "${TRAIN_FAIL}" -ne 0 ]]; then
+      echo "One or more training jobs failed. Aborting." >&2
+      exit 1
+    fi
+  fi
+
+  # ── 3) EVALUATION ───────────────────────────────────────────────
+  # Serve each LoRA sequentially (eval is fast, vLLM startup is the bottleneck).
+  echo
+  echo "── Stage 3: Evaluation (sequential, 1 LoRA at a time) ──"
+  for ANIMAL in "${ANIMALS_ARR[@]}"; do
+    ANIMAL="$(echo "${ANIMAL}" | xargs)"
+    [[ -z "${ANIMAL}" ]] && continue
+
+    OUT_DIR="runs/${MODEL_SLUG}-${ANIMAL}${NUM_SAMPLES}"
+    CKPT_DIR="$(latest_checkpoint_dir "${OUT_DIR}")"
+    LORA_NAME="${MODEL_SLUG}-${ANIMAL}${NUM_SAMPLES}"
+
+    start_vllm_with_lora "${BASE_MODEL}" "${LORA_NAME}" "${CKPT_DIR}"
+    echo "  Evaluating ${LORA_NAME}"
+    MODEL_NAME="${LORA_NAME}" \
+      VLLM_BASE_URL="http://localhost:${PORT}/v1" \
+      bash eval/run-eval.sh
+    stop_vllm
+  done
+done
+
+echo
+echo "Done."
